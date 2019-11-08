@@ -6,7 +6,10 @@ test:alpine:
     stage: test
     script:
         - apk update
-        - apk add make gcc git musl-dev openssl-dev linux-headers zlib-dev lua5.3-dev
+        - apk add abuild coreutils gcc git linux-headers lua5.3-dev make musl-dev openssl-dev scdoc linux-headers zlib-dev
+        - make install
+        - mkdir /root/.abuild/
+        - abuild-keygen -n 2>&1 | grep "PACKAGER_PRIVKEY" | sed 's/>>> //' > /root/.abuild/abuild.conf
         - make -j$(nproc) check
     tags:
         - docker-alpine
@@ -17,8 +20,17 @@ test:debian:
     script:
         - apt-get update
         - apt-get install -y make gcc git libssl-dev zlib1g-dev lua5.3-dev sudo
+        - git clone https://git.sr.ht/~sircmpwn/scdoc
+        - (cd scdoc && make && make install)
+        - git clone https://gitlab.alpinelinux.org/alpine/abuild.git
+        - (cd abuild && make install)
         - unlink /bin/sh
         - ln -s /bin/bash /bin/sh
+        - echo "begin install"
+        - make install
+        - echo "install complete"
+        - mkdir /root/.abuild/
+        - abuild-keygen -n 2>&1 | grep "PACKAGER_PRIVKEY" | sed 's/>>> //' > /root/.abuild/abuild.conf
         - make -j$(nproc) check
     tags:
         - docker-alpine

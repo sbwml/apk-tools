@@ -581,38 +581,27 @@ int apk_repo_format_cache_index(apk_blob_t to, struct apk_repository *repo)
 	return 0;
 }
 
-int apk_repo_format_real_url(struct apk_database *db, struct apk_repository *repo,
+int apk_repo_format_real_url(apk_blob_t *db_arch, struct apk_repository *repo,
 			     struct apk_package *pkg, char *buf, size_t len)
 {
 	apk_blob_t arch;
 	int r;
 
 	if (pkg && pkg->arch) arch = *pkg->arch;
-	else arch = *db->arch;
+	else arch = *db_arch;
 
-	if (pkg != NULL)
+	if (pkg != NULL) {
 		r = snprintf(buf, len, "%s%s" BLOB_FMT "/"  PKG_FILE_FMT,
 			     repo->url, repo->url[strlen(repo->url)-1] == '/' ? "" : "/",
 			     BLOB_PRINTF(arch), PKG_FILE_PRINTF(pkg));
-	else
+	} else {
 		r = snprintf(buf, len, "%s%s" BLOB_FMT "/%s",
 			     repo->url, repo->url[strlen(repo->url)-1] == '/' ? "" : "/",
 			     BLOB_PRINTF(arch), apkindex_tar_gz);
+	}
 	if (r >= len)
 		return -ENOBUFS;
 	return 0;
-}
-
-int apk_repo_format_item(struct apk_database *db, struct apk_repository *repo, struct apk_package *pkg,
-			 int *fd, char *buf, size_t len)
-{
-	if (repo->url == db->repos[APK_REPOSITORY_CACHED].url) {
-		*fd = db->cache_fd;
-		return apk_pkg_format_cache_pkg(APK_BLOB_PTR_LEN(buf, len), pkg);
-	} else {
-		*fd = AT_FDCWD;
-		return apk_repo_format_real_url(db, repo, pkg, buf, len);
-	}
 }
 
 int apk_cache_download(struct apk_database *db, struct apk_repository *repo,
@@ -635,7 +624,11 @@ int apk_cache_download(struct apk_database *db, struct apk_repository *repo,
 		r = apk_repo_format_cache_index(b, repo);
 	if (r < 0) return r;
 
-	r = apk_repo_format_real_url(db, repo, pkg, url, sizeof(url));
+	struct apk_arch_list *arch = NULL;
+	list_for_each_entry(arch, &db->archs, list) {
+		r = apk_repo_format_real_url(arch->blob, repo, pkg, url, sizeof(url));
+		if (r >= 0) break;
+	}
 	if (r < 0) return r;
 
 	if (autoupdate && !(apk_force & APK_FORCE_REFRESH)) {
@@ -1474,6 +1467,16 @@ static int apk_db_name_rdepends(apk_hash_item item, void *pctx)
 	return 0;
 }
 
+static int apk_db_add_arch(void *ctx, apk_blob_t blob)
+{
+	struct apk_database *db = (struct apk_database *) ctx;
+	struct apk_arch_list * aal = calloc(1, sizeof(struct apk_arch_list));
+	aal->blob = apk_blob_atomize_dup(apk_blob_trim(blob));
+	list_add(&aal->list, &db->archs);
+
+	return 0;
+}
+
 
 static unsigned long map_statfs_flags(unsigned long f_flag)
 {
@@ -1501,6 +1504,7 @@ void apk_db_init(struct apk_database *db)
 	apk_hash_init(&db->installed.files, &file_hash_ops, 200000);
 	list_init(&db->installed.packages);
 	list_init(&db->installed.triggers);
+	list_init(&db->archs);
 	apk_dependency_array_init(&db->world);
 	apk_protected_path_array_init(&db->protected_paths);
 	db->permanent = 1;
@@ -1550,19 +1554,22 @@ int apk_db_open(struct apk_database *db, struct apk_db_options *dbopts)
 	    stfs.f_type == TMPFS_MAGIC)
 		db->permanent = 0;
 
-	if (dbopts->root && dbopts->arch) {
-		db->arch = apk_blob_atomize(APK_BLOB_STR(dbopts->arch));
+	struct apk_arch_list *arch = NULL;
+	list_for_each_entry(arch, &dbopts->arch_list, list) {
+		struct apk_arch_list * aal = calloc(1, sizeof(struct apk_arch_list));
+		aal->blob = apk_blob_atomize(APK_BLOB_STR(arch->blob->ptr));
+		list_add(&aal->list, &db->archs);
+		write_arch = TRUE;
+	}
+
+	apk_blob_t archs = apk_blob_from_file(db->root_fd, apk_arch_file);
+	if (APK_BLOB_IS_NULL(archs)) {
+		struct apk_arch_list * aal = calloc(1, sizeof(struct apk_arch_list));
+		aal->blob = apk_blob_atomize(APK_BLOB_STR(APK_DEFAULT_ARCH));
+		list_add(&aal->list, &db->archs);
 		write_arch = TRUE;
 	} else {
-		apk_blob_t arch;
-		arch = apk_blob_from_file(db->root_fd, apk_arch_file);
-		if (!APK_BLOB_IS_NULL(arch)) {
-			db->arch = apk_blob_atomize_dup(apk_blob_trim(arch));
-			free(arch.ptr);
-		} else {
-			db->arch = apk_blob_atomize(APK_BLOB_STR(APK_DEFAULT_ARCH));
-			write_arch = TRUE;
-		}
+		apk_blob_for_each_segment(archs, "\n", apk_db_add_arch, db);
 	}
 
 	apk_id_cache_init(&db->id_cache, db->root_fd);
@@ -1601,8 +1608,21 @@ int apk_db_open(struct apk_database *db, struct apk_db_options *dbopts)
 			} else
 				goto ret_errno;
 		}
-		if (write_arch)
-			apk_blob_to_file(db->root_fd, apk_arch_file, *db->arch, APK_BTF_ADD_EOL);
+
+		if (write_arch) {
+			struct apk_arch_list * a = NULL;
+			char buf[APK_BLOB_ARCHS_BUF];
+			apk_blob_t bfn;
+			bfn.ptr = buf;
+			bfn.len = APK_BLOB_ARCHS_BUF;
+			list_for_each_entry(a, &db->archs, list) {
+				if (!a) break;
+				apk_blob_push_blob(&bfn, *(a->blob));
+				apk_blob_push_blob(&bfn, APK_BLOB_STR("\n"));
+			}
+			apk_blob_to_file(db->root_fd, apk_arch_file, APK_BLOB_STR(buf), APK_BTF_ADD_EOL);
+
+		}
 
 		/* mount /proc */
 		if (asprintf(&db->root_proc_dir, "%s/proc", db->root) == -1)
@@ -2214,6 +2234,7 @@ int apk_db_add_repository(apk_database_t _db, apk_blob_t _repository)
 {
 	struct apk_database *db = _db.db;
 	struct apk_repository *repo;
+	struct apk_istream *is;
 	apk_blob_t brepo, btag;
 	int repo_num, r, targz = 1, tag_id = 0;
 	char buf[PATH_MAX], *url;
@@ -2252,31 +2273,40 @@ int apk_db_add_repository(apk_database_t _db, apk_blob_t _repository)
 
 	apk_blob_checksum(brepo, apk_checksum_default(), &repo->csum);
 
-	if (apk_url_local_file(repo->url) == NULL) {
-		if (!(apk_flags & APK_NO_NETWORK))
-			db->available_repos |= BIT(repo_num);
-		if (apk_flags & APK_NO_CACHE) {
-			r = apk_repo_format_real_url(db, repo, NULL, buf, sizeof(buf));
-			if (r == 0) apk_message("fetch %s", buf);
+	struct apk_arch_list *arch = NULL;
+	list_for_each_entry(arch, &db->archs, list) {
+		if (!arch) break;
+		if (apk_url_local_file(repo->url) == NULL) {
+			if (!(apk_flags & APK_NO_NETWORK))
+				db->available_repos |= BIT(repo_num);
+			if (apk_flags & APK_NO_CACHE) {
+				r = apk_repo_format_real_url(arch->blob, repo, NULL, buf, sizeof(buf));
+				if (r == 0) apk_message("fetch %s", buf);
+			} else {
+				if (db->autoupdate) apk_repository_update(db, repo);
+				r = apk_repo_format_cache_index(APK_BLOB_BUF(buf), repo);
+			}
 		} else {
-			if (db->autoupdate) apk_repository_update(db, repo);
-			r = apk_repo_format_cache_index(APK_BLOB_BUF(buf), repo);
+			db->local_repos |= BIT(repo_num);
+			db->available_repos |= BIT(repo_num);
+			r = apk_repo_format_real_url(arch->blob, repo, NULL, buf, sizeof(buf));
 		}
-	} else {
-		db->local_repos |= BIT(repo_num);
-		db->available_repos |= BIT(repo_num);
-		r = apk_repo_format_real_url(db, repo, NULL, buf, sizeof(buf));
-	}
-	if (r == 0) {
-		r = load_index(db, apk_istream_from_fd_url(db->cache_fd, buf), targz, repo_num);
-	}
+		if (r == 0) {
+			is = apk_istream_from_fd_url(db->cache_fd, buf);
+			if (!IS_ERR_OR_NULL(is)) {
+				r = load_index(db, is, targz, repo_num);
+			} else {
+				r = PTR_ERR(is);
+			}
+		}
 
-	if (r != 0) {
-		apk_warning("Ignoring %s: %s", buf, apk_error_str(r));
-		db->available_repos &= ~BIT(repo_num);
-		r = 0;
-	} else {
-		db->repo_tags[tag_id].allowed_repos |= BIT(repo_num);
+		if (r != 0) {
+			apk_warning("Ignoring %s: %s", buf, apk_error_str(r));
+			db->available_repos &= ~BIT(repo_num);
+			r = 0;
+		} else {
+			db->repo_tags[tag_id].allowed_repos |= BIT(repo_num);
+		}
 	}
 
 	return 0;
@@ -2757,34 +2787,45 @@ static int apk_db_unpack_pkg(struct apk_database *db,
 	char tmpcacheitem[128], *cacheitem = &tmpcacheitem[tmpprefix.len];
 	int r, filefd = AT_FDCWD, need_copy = FALSE;
 
-	if (pkg->filename == NULL) {
-		repo = apk_db_select_repo(db, pkg);
-		if (repo == NULL) {
-			r = -ENOPKG;
-			goto err_msg;
-		}
-		r = apk_repo_format_item(db, repo, pkg, &filefd, file, sizeof(file));
-		if (r < 0)
-			goto err_msg;
-		if (!(pkg->repos & db->local_repos))
+	struct apk_arch_list *arch = NULL;
+	list_for_each_entry(arch, &db->archs, list) {
+		if (pkg->filename == NULL) {
+			repo = apk_db_select_repo(db, pkg);
+			if (repo == NULL) {
+				r = -ENOPKG;
+				goto err_msg;
+			}
+
+			r = apk_repo_format_real_url(arch->blob, repo, pkg, file, sizeof(file));
+			if (r < 0) {
+				goto err_msg;
+			}
+			if (!(pkg->repos & db->local_repos))
+				need_copy = TRUE;
+		} else {
+			if (strlcpy(file, pkg->filename, sizeof file) >= sizeof file) {
+				r = -ENAMETOOLONG;
+				goto err_msg;
+			}
 			need_copy = TRUE;
-	} else {
-		if (strlcpy(file, pkg->filename, sizeof file) >= sizeof file) {
-			r = -ENAMETOOLONG;
-			goto err_msg;
 		}
-		need_copy = TRUE;
+		if (!apk_db_cache_active(db))
+			need_copy = FALSE;
+
+		is = apk_istream_from_fd_url(filefd, file);
+		if (!IS_ERR_OR_NULL(is))
+			break;
 	}
-	if (!apk_db_cache_active(db))
-		need_copy = FALSE;
 
 	is = apk_istream_from_fd_url(filefd, file);
 	if (IS_ERR_OR_NULL(is)) {
 		r = PTR_ERR(is);
-		if (r == -ENOENT && pkg->filename == NULL)
+		if (r == -ENOENT && pkg->filename == NULL) {
 			r = -EAPKSTALEINDEX;
-		goto err_msg;
+			goto err_msg;
+		}
 	}
+
 	if (need_copy) {
 		apk_blob_t b = APK_BLOB_BUF(tmpcacheitem);
 		apk_blob_push_blob(&b, tmpprefix);

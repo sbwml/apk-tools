@@ -75,9 +75,20 @@ static struct apk_repository_list *apk_repository_new(const char *url)
 	return r;
 }
 
+static struct apk_arch_list *apk_arch_new(const char *arch)
+{
+	struct apk_arch_list *a = calloc(1, sizeof(struct apk_arch_list));
+	if (a) {
+		a->blob = apk_blob_atomize(APK_BLOB_STR(arch));
+		list_init(&a->list);
+	}
+	return a;
+}
+
 static int option_parse_global(void *ctx, struct apk_db_options *dbopts, int optch, const char *optarg)
 {
 	struct apk_repository_list *repo;
+	struct apk_arch_list * arch;
 
 	switch (optch) {
 	case 'h': return -EINVAL;
@@ -168,7 +179,8 @@ static int option_parse_global(void *ctx, struct apk_db_options *dbopts, int opt
 		dbopts->cache_max_age = atoi(optarg) * 60;
 		break;
 	case 0x112:
-		dbopts->arch = optarg;
+		arch = apk_arch_new(optarg);
+		if (arch) list_add(&arch->list, &dbopts->arch_list);
 		break;
 	case 0x114:
 		puts(APK_DEFAULT_ARCH);
@@ -478,6 +490,7 @@ int main(int argc, char **argv)
 
 	memset(&dbopts, 0, sizeof(dbopts));
 	list_init(&dbopts.repository_list);
+	list_init(&dbopts.arch_list);
 	apk_atom_init();
 	umask(0);
 	setup_terminal();

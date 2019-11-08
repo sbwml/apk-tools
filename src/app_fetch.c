@@ -147,9 +147,13 @@ static int fetch_package(apk_hash_item item, void *pctx)
 	if (apk_flags & APK_SIMULATE)
 		return 0;
 
-	r = apk_repo_format_item(db, repo, pkg, &urlfd, url, sizeof(url));
-	if (r < 0)
-		goto err;
+	struct apk_arch_list *arch = NULL;
+	urlfd = AT_FDCWD;
+	list_for_each_entry(arch, &db->archs, list) {
+		r = apk_repo_format_real_url(arch->blob, repo, pkg, url, sizeof(urlfd));
+		if (r < 0)
+			goto err;
+	}
 
 	if (ctx->flags & FETCH_STDOUT) {
 		fd = STDOUT_FILENO;

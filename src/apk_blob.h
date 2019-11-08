@@ -41,6 +41,7 @@ extern apk_blob_t apk_null_blob;
 /* Enough space for a hexdump of the longest checksum possible plus
  * a two-character type prefix */
 #define APK_BLOB_CHECKSUM_BUF	(2 + (2 * APK_CHECKSUM_MAX))
+#define APK_BLOB_ARCHS_BUF	512
 
 /* Internal container for checksums */
 struct apk_checksum {

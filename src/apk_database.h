@@ -12,11 +12,12 @@
 #ifndef APK_PKGDB_H
 #define APK_PKGDB_H
 
-#include "apk_version.h"
-#include "apk_hash.h"
 #include "apk_archive.h"
-#include "apk_package.h"
+#include "apk_defines.h"
+#include "apk_hash.h"
 #include "apk_io.h"
+#include "apk_package.h"
+#include "apk_version.h"
 
 #include "apk_provider_data.h"
 #include "apk_solver_data.h"
@@ -121,16 +122,21 @@ struct apk_repository_list {
 	const char *url;
 };
 
+struct apk_arch_list {
+	struct list_head list;
+	apk_blob_t * blob;
+};
+
 struct apk_db_options {
 	int lock_wait;
 	unsigned int cache_max_age;
 	unsigned long open_flags;
 	const char *root;
-	const char *arch;
 	const char *keys_dir;
 	const char *cache_dir;
 	const char *repositories_file;
 	struct list_head repository_list;
+	struct list_head arch_list;
 };
 
 #define APK_REPOSITORY_CACHED		0
@@ -151,7 +157,7 @@ struct apk_database {
 	const char *cache_dir;
 	char *cache_remount_dir, *root_proc_dir;
 	unsigned long cache_remount_flags;
-	apk_blob_t *arch;
+	struct list_head archs;
 	unsigned int local_repos, available_repos, cache_max_age;
 	unsigned int repo_update_errors, repo_update_counter;
 	unsigned int pending_triggers;
@@ -243,8 +249,8 @@ struct apk_repository *apk_db_select_repo(struct apk_database *db,
 					  struct apk_package *pkg);
 
 int apk_repo_format_cache_index(apk_blob_t to, struct apk_repository *repo);
-int apk_repo_format_item(struct apk_database *db, struct apk_repository *repo, struct apk_package *pkg,
-			 int *fd, char *buf, size_t len);
+int apk_repo_format_real_url(apk_blob_t *blob, struct apk_repository *repo, struct apk_package *pkg,
+                             char *url, size_t len);
 
 unsigned int apk_db_get_pinning_mask_repos(struct apk_database *db, unsigned short pinning_mask);
 
