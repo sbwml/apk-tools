@@ -30,6 +30,10 @@ will accept it. See *abuild-sign*(1) for details.
 	Read an existing index from _INDEX_ to speed up the creation of the new
 	index by reusing data when possible.
 
+*--no-warnings*
+	Will disable the warning about a package, A, depending on a package, B,
+	that do not have a provider in the current repository.
+
 # AUTHORS
 
 Natanael Copa <ncopa@alpinelinux.org>++
