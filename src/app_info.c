@@ -39,6 +39,7 @@ struct info_ctx {
 #define APK_INFO_RINSTALL_IF	0x200
 #define APK_INFO_REPLACES	0x400
 #define APK_INFO_LICENSE	0x800
+#define APK_INFO_RECOMMENDS	0xa00
 
 static void verbose_print_pkg(struct apk_package *pkg, int minimal_verbosity)
 {
@@ -275,6 +276,11 @@ static void info_print_rinstall_if(struct apk_database *db, struct apk_package *
 	}
 }
 
+static void info_print_recommends(struct apk_database *db, struct apk_package *pkg)
+{
+	info_print_dep_array(db, pkg, pkg->recommends, "has recommends rule");
+}
+
 static void info_print_contents(struct apk_database *db, struct apk_package *pkg)
 {
 	struct apk_installed_package *ipkg = pkg->ipkg;
@@ -334,6 +340,7 @@ static void info_subaction(struct info_ctx *ctx, struct apk_package *pkg)
 		info_print_rinstall_if,
 		info_print_replaces,
 		info_print_license,
+		info_print_recommends,
 	};
 	const int requireipkg =
 		APK_INFO_CONTENTS | APK_INFO_TRIGGERS | APK_INFO_RDEPENDS |
@@ -419,6 +426,9 @@ static int option_parse_applet(void *pctx, struct apk_db_options *dbopts, int op
 	case 'a':
 		ctx->subaction_mask = 0xffffffff;
 		break;
+	case 'b':
+		ctx->subaction_mask |= APK_INFO_RECOMMENDS;
+		break;
 	default:
 		return -ENOTSUP;
 	}
@@ -459,6 +469,7 @@ static const struct apk_option options_applet[] = {
 	{ 0x10000, "replaces" },
 	{ 0x10002, "install-if" },
 	{ 0x10003, "rinstall-if" },
+	{ 'b', "recommends" },
 	{ 'w', "webpage" },
 	{ 's', "size" },
 	{ 'd', "description" },

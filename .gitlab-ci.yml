@@ -6,7 +6,10 @@ test:alpine:
     stage: test
     script:
         - apk update
-        - apk add make gcc git musl-dev openssl-dev linux-headers zlib-dev lua5.3-dev
+        - apk add make gcc git musl-dev openssl-dev linux-headers zlib-dev lua5.3-dev abuild coreutils
+        - git clone https://git.sr.ht/~sircmpwn/scdoc
+        - (cd scdoc && make && make install)
+        - make -j$(nproc) install
         - make -j$(nproc) check
     tags:
         - docker-alpine
@@ -19,6 +22,11 @@ test:debian:
         - apt-get install -y make gcc git libssl-dev zlib1g-dev lua5.3-dev sudo
         - unlink /bin/sh
         - ln -s /bin/bash /bin/sh
+        - git clone https://git.sr.ht/~sircmpwn/scdoc
+        - (cd scdoc && make && make install)
+        - git clone https://gitlab.alpinelinux.org/alpine/abuild.git
+        - (cd abuild && make && make install)
+        - make -j$(nproc) install
         - make -j$(nproc) check
     tags:
         - docker-alpine

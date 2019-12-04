@@ -99,7 +99,9 @@ struct apk_name {
 	struct apk_provider_array *providers;
 	struct apk_name_array *rdepends;
 	struct apk_name_array *rinstall_if;
+	struct apk_name_array *rrecommends;
 	unsigned is_dependency : 1;
+	unsigned is_recommends : 1;
 	unsigned auto_select_virtual: 1;
 	unsigned priority : 2;
 	unsigned int foreach_genid;

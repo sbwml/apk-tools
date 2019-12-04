@@ -108,6 +108,7 @@ static void pkg_name_free(struct apk_name *name)
 	apk_provider_array_free(&name->providers);
 	apk_name_array_free(&name->rdepends);
 	apk_name_array_free(&name->rinstall_if);
+	apk_name_array_free(&name->rrecommends);
 	free(name);
 }
 
@@ -222,6 +223,7 @@ struct apk_name *apk_db_get_name(struct apk_database *db, apk_blob_t name)
 	apk_provider_array_init(&pn->providers);
 	apk_name_array_init(&pn->rdepends);
 	apk_name_array_init(&pn->rinstall_if);
+	apk_name_array_init(&pn->rrecommends);
 	apk_hash_insert_hashed(&db->available.names, pn, hash);
 
 	return pn;
@@ -1458,6 +1460,14 @@ static int apk_db_name_rdepends(apk_hash_item item, void *pctx)
 				if (!rname->state_int) *apk_name_array_add(&touched) = rname;
 				rname->state_int |= 2;
 				*apk_name_array_add(&rname->rinstall_if) = name;
+			}
+		}
+		foreach_array_item(dep, p->pkg->recommends) {
+			rname = dep->name;
+			if (!(rname->state_int & 4)) {
+				if (!rname->state_int) *apk_name_array_add(&touched) = rname;
+				rname->state_int |= 4;
+				*apk_name_array_add(&rname->rrecommends) = name;
 			}
 		}
 	}

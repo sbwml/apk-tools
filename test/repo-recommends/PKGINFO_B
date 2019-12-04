@@ -1,0 +1,6 @@
+pkgname = test-b
+pkgver = 1.0
+arch = arch1
+license = GPL
+recommend = test-a
+recommend = test-c

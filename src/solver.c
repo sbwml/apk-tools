@@ -105,7 +105,7 @@ static void queue_unresolved(struct apk_solver_state *ss, struct apk_name *name)
 		return;
 
 	want = (name->ss.requirers > 0) || (name->ss.has_iif);
-	dbg_printf("queue_unresolved: %s, want=%d (requirers=%d, has_iif=%d)\n", name->name, want, name->ss.requirers, name->ss.has_iif);
+	dbg_printf("queue_unresolved: %s, want=%d (requirers=%d, has_iif=%d, is_recommends=%d)\n", name->name, want, name->ss.requirers, name->ss.has_iif, name->is_recommends);
 	if (want && !list_hashed(&name->ss.unresolved_list))
 		list_add(&name->ss.unresolved_list, &ss->unresolved_head);
 	else if (!want && list_hashed(&name->ss.unresolved_list))
@@ -221,6 +221,12 @@ static void discover_name(struct apk_solver_state *ss, struct apk_name *name)
 				pkg->ipkg;
 
 			foreach_array_item(dep, pkg->depends) {
+				discover_name(ss, dep->name);
+				pkg->ss.max_dep_chain = max(pkg->ss.max_dep_chain,
+							    dep->name->ss.max_dep_chain+1);
+			}
+
+			foreach_array_item(dep, pkg->recommends) {
 				discover_name(ss, dep->name);
 				pkg->ss.max_dep_chain = max(pkg->ss.max_dep_chain,
 							    dep->name->ss.max_dep_chain+1);
@@ -381,6 +387,13 @@ static void reconsider_name(struct apk_solver_state *ss, struct apk_name *name)
 					break;
 				}
 			}
+			foreach_array_item(dep, pkg->recommends) {
+				if (!dependency_satisfiable(ss, dep)) {
+					disqualify_package(ss, pkg, "dependency no longer satisfiable");
+					break;
+				}
+			}
+
 		}
 		if (!pkg->ss.pkg_selectable)
 			continue;
@@ -425,6 +438,10 @@ static void reconsider_name(struct apk_solver_state *ss, struct apk_name *name)
 		foreach_array_item(dep, pkg->depends)
 			if (!dep->conflict)
 				merge_index(&dep->name->ss.merge_depends, num_options);
+		foreach_array_item(dep, pkg->recommends)
+			if (!dep->conflict)
+				merge_index(&dep->name->ss.merge_depends, num_options);
+
 
 		if (merge_index(&pkg->name->ss.merge_provides, num_options))
 			pkg->name->ss.has_virtual_provides |= (p->version == &apk_null_blob);
@@ -448,9 +465,16 @@ static void reconsider_name(struct apk_solver_state *ss, struct apk_name *name)
 		/* propagate down common dependencies */
 		if (num_options == 1) {
 			/* FIXME: keeps increasing counts, use bit fields instead? */
-			foreach_array_item(dep, pkg->depends)
+			foreach_array_item(dep, pkg->depends) {
 				if (merge_index_complete(&dep->name->ss.merge_depends, num_options))
 					apply_constraint(ss, pkg, dep);
+			}
+			foreach_array_item(dep, pkg->recommends) {
+				if (merge_index_complete(&dep->name->ss.merge_depends, num_options))
+					apply_constraint(ss, pkg, dep);
+			}
+			foreach_array_item(dep, pkg->recommends)
+				dep->name->is_recommends = 1;
 		} else {
 			/* FIXME: could merge versioning bits too */
 			foreach_array_item(dep, pkg->depends) {
@@ -715,10 +739,14 @@ static void select_package(struct apk_solver_state *ss, struct apk_name *name)
 
 		foreach_array_item(d, pkg->depends)
 			apply_constraint(ss, pkg, d);
+		foreach_array_item(d, pkg->recommends)
+			apply_constraint(ss, pkg, d);
+		foreach_array_item(d, pkg->recommends)
+			d->name->is_recommends = 1;
 	} else {
 		dbg_printf("selecting: %s [unassigned]\n", name->name);
 		assign_name(ss, name, provider_none);
-		if (name->ss.requirers > 0) {
+		if (name->ss.requirers > 0 && name->is_recommends == 0) {
 			dbg_printf("ERROR NO-PROVIDER: %s\n", name->name);
 			ss->errors++;
 		}
@@ -860,6 +888,8 @@ static void cset_gen_name_change(struct apk_solver_state *ss, struct apk_name *n
 
 	foreach_array_item(d, pkg->depends)
 		cset_gen_dep(ss, pkg, d);
+	foreach_array_item(d, pkg->recommends)
+		cset_gen_dep(ss, pkg, d);
 
 	dbg_printf("Selecting: "PKG_VER_FMT"%s\n", PKG_VER_PRINTF(pkg), pkg->ss.pkg_selectable ? "" : " [NOT SELECTABLE]");
 	record_change(ss, opkg, pkg);
@@ -903,7 +933,7 @@ static void cset_gen_dep(struct apk_solver_state *ss, struct apk_package *ppkg, 
 	if (dep->conflict && ss->ignore_conflict)
 		return;
 
-	if (!apk_dep_is_provided(dep, &name->ss.chosen))
+	if (!apk_dep_is_provided(dep, &name->ss.chosen) && dep->name->is_recommends == 0)
 		mark_error(ss, ppkg, "unfulfilled dependency");
 
 	cset_gen_name_change(ss, name);

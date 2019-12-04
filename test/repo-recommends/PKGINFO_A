@@ -1,0 +1,4 @@
+pkgname = test-a
+pkgver = 1.0
+arch = arch1
+license = GPL

@@ -64,6 +64,7 @@ struct apk_package *apk_pkg_new(void)
 		apk_dependency_array_init(&pkg->depends);
 		apk_dependency_array_init(&pkg->install_if);
 		apk_dependency_array_init(&pkg->provides);
+		apk_dependency_array_init(&pkg->recommends);
 	}
 
 	return pkg;
@@ -813,6 +814,9 @@ int apk_pkg_add_info(struct apk_database *db, struct apk_package *pkg,
 	case 'i':
 		apk_blob_pull_deps(&value, db, &pkg->install_if);
 		break;
+	case 'B':
+		apk_blob_pull_deps(&value, db, &pkg->recommends);
+		break;
 	case 'o':
 		pkg->origin = apk_blob_atomize_dup(value);
 		break;
@@ -861,6 +865,7 @@ static int read_info_line(void *ctx, apk_blob_t line)
 		{ "arch",	'A' },
 		{ "depend",	'D' },
 		{ "install_if",	'i' },
+		{ "recommend",	'B' },
 		{ "provides",	'p' },
 		{ "origin",	'o' },
 		{ "maintainer",	'm' },
@@ -968,6 +973,7 @@ void apk_pkg_free(struct apk_package *pkg)
 	apk_dependency_array_free(&pkg->depends);
 	apk_dependency_array_free(&pkg->provides);
 	apk_dependency_array_free(&pkg->install_if);
+	apk_dependency_array_free(&pkg->recommends);
 	if (pkg->url)
 		free(pkg->url);
 	if (pkg->description)
@@ -1154,6 +1160,7 @@ int apk_pkg_write_index_entry(struct apk_package *info,
 	if (apk_ostream_write(os, bbuf.ptr, bbuf.len) != bbuf.len ||
 	    write_depends(os, "D:", info->depends) ||
 	    write_depends(os, "p:", info->provides) ||
+	    write_depends(os, "B:", info->recommends) ||
 	    write_depends(os, "i:", info->install_if))
 		return -EIO;
 
