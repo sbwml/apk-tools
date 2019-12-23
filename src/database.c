@@ -2767,7 +2767,8 @@ static void apk_db_migrate_files(struct apk_database *db,
 
 static int apk_db_unpack_pkg(struct apk_database *db,
 			     struct apk_installed_package *ipkg,
-			     int upgrade, apk_progress_cb cb, void *cb_ctx,
+			     int upgrade, uint32_t install_opts,
+			     apk_progress_cb cb, void *cb_ctx,
 			     char **script_args)
 {
 	struct install_ctx ctx;
@@ -2777,7 +2778,7 @@ static int apk_db_unpack_pkg(struct apk_database *db,
 	struct apk_package *pkg = ipkg->pkg;
 	char file[PATH_MAX];
 	char tmpcacheitem[128], *cacheitem = &tmpcacheitem[tmpprefix.len];
-	int r, filefd = AT_FDCWD, need_copy = FALSE;
+	int r = 0, filefd = AT_FDCWD, need_copy = FALSE;
 
 	if (pkg->filename == NULL) {
 		repo = apk_db_select_repo(db, pkg);
@@ -2797,20 +2798,31 @@ static int apk_db_unpack_pkg(struct apk_database *db,
 		}
 		need_copy = TRUE;
 	}
-	if (!apk_db_cache_active(db))
+	if (!apk_db_cache_active(db)) {
 		need_copy = FALSE;
-
-	bs = apk_bstream_from_fd_url(filefd, file);
-	if (IS_ERR_OR_NULL(bs)) {
-		r = PTR_ERR(bs);
-		if (r == -ENOENT && pkg->filename == NULL)
-			r = -EAPKSTALEINDEX;
-		goto err_msg;
-	}
-	if (need_copy) {
+	} else {
+		/* Attempt to install from cache, if present */
 		apk_blob_t b = APK_BLOB_BUF(tmpcacheitem);
 		apk_blob_push_blob(&b, tmpprefix);
 		apk_pkg_format_cache_pkg(b, pkg);
+		cache_bs = apk_bstream_from_file(db->cache_fd, cacheitem);
+		if (!IS_ERR_OR_NULL(cache_bs)) {
+			bs = cache_bs;
+			need_copy = FALSE;
+		}
+	}
+
+	if (!bs) {
+		bs = apk_bstream_from_fd_url(filefd, file);
+		if (IS_ERR_OR_NULL(bs)) {
+			r = PTR_ERR(bs);
+			if (r == -ENOENT && pkg->filename == NULL)
+				r = -EAPKSTALEINDEX;
+			goto err_msg;
+		}
+	}
+
+	if (need_copy && (install_opts & APK_INSTALL_DOWNLOAD)) {
 		cache_bs = apk_bstream_tee(bs, db->cache_fd, tmpcacheitem, 1, NULL, NULL);
 		if (!IS_ERR_OR_NULL(cache_bs))
 			bs = cache_bs;
@@ -2831,11 +2843,14 @@ static int apk_db_unpack_pkg(struct apk_database *db,
 	};
 	apk_sign_ctx_init(&ctx.sctx, APK_SIGN_VERIFY_IDENTITY, &pkg->csum, db->keys_fd);
 	tar = apk_bstream_gunzip_mpart(bs, apk_sign_ctx_mpart_cb, &ctx.sctx);
-	r = apk_tar_parse(tar, apk_db_install_archive_entry, &ctx, TRUE, &db->id_cache);
+	if (install_opts & APK_INSTALL_COMMIT)
+		r = apk_tar_parse(tar, apk_db_install_archive_entry, &ctx, TRUE, &db->id_cache);
+	else
+		r = apk_tar_parse(tar, apk_sign_ctx_verify_tar, &ctx.sctx, FALSE, &db->id_cache);
 	apk_sign_ctx_free(&ctx.sctx);
 	apk_istream_close(tar);
 
-	if (need_copy) {
+	if (need_copy && (install_opts & APK_INSTALL_DOWNLOAD)) {
 		if (r == 0) {
 			renameat(db->cache_fd, tmpcacheitem, db->cache_fd, cacheitem);
 			pkg->repos |= BIT(APK_REPOSITORY_CACHED);
@@ -2854,7 +2869,8 @@ err_msg:
 }
 
 int apk_db_install_pkg(struct apk_database *db, struct apk_package *oldpkg,
-		       struct apk_package *newpkg, apk_progress_cb cb, void *cb_ctx)
+		struct apk_package *newpkg, uint32_t install_opts,
+		apk_progress_cb cb, void *cb_ctx)
 {
 	char *script_args[] = { NULL, NULL, NULL, NULL };
 	struct apk_installed_package *ipkg;
@@ -2870,6 +2886,8 @@ int apk_db_install_pkg(struct apk_database *db, struct apk_package *oldpkg,
 
 	/* Just purging? */
 	if (oldpkg != NULL && newpkg == NULL) {
+		if (!(install_opts & APK_INSTALL_COMMIT))
+			goto ret_r;
 		ipkg = oldpkg->ipkg;
 		if (ipkg == NULL)
 			goto ret_r;
@@ -2893,7 +2911,7 @@ int apk_db_install_pkg(struct apk_database *db, struct apk_package *oldpkg,
 	}
 
 	if (newpkg->installed_size != 0) {
-		r = apk_db_unpack_pkg(db, ipkg, (oldpkg != NULL),
+		r = apk_db_unpack_pkg(db, ipkg, (oldpkg != NULL), install_opts,
 				      cb, cb_ctx, script_args);
 		if (r != 0) {
 			if (oldpkg != newpkg)

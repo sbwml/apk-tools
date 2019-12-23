@@ -27,7 +27,7 @@ static inline int pkg_available(struct apk_database *db, struct apk_package *pkg
 }
 
 static int print_change(struct apk_database *db, struct apk_change *change,
-			int cur, int total)
+		uint32_t step, int cur, int total)
 {
 	struct apk_name *name;
 	struct apk_package *oldpkg = change->old_pkg;
@@ -41,9 +41,22 @@ static int print_change(struct apk_database *db, struct apk_change *change,
 
 	name = newpkg ? newpkg->name : oldpkg->name;
 	if (oldpkg == NULL) {
-		msg = "Installing";
+		switch (step) {
+		case APK_INSTALL_DOWNLOAD | APK_INSTALL_COMMIT:
+			msg = "Installing";
+			break;
+		case APK_INSTALL_DOWNLOAD:
+			msg = "Fetching";
+			break;
+		case APK_INSTALL_COMMIT:
+			msg = "Extracting";
+			break;
+		}
 		oneversion = newpkg->version;
 	} else if (newpkg == NULL) {
+		if (!(step & APK_INSTALL_COMMIT)) {
+			return TRUE;
+		}
 		msg = "Purging";
 		oneversion = oldpkg->version;
 	} else if (newpkg == oldpkg) {
@@ -54,6 +67,9 @@ static int print_change(struct apk_database *db, struct apk_change *change,
 				msg = "[APK unavailable, skipped] Reinstalling";
 		} else if (change->old_repository_tag != change->new_repository_tag) {
 			msg = "Updating pinning";
+		}
+		if (msg && !(step & APK_INSTALL_COMMIT)) {
+			msg = "Fetching";
 		}
 		oneversion = newpkg->version;
 	} else {
@@ -68,6 +84,9 @@ static int print_change(struct apk_database *db, struct apk_change *change,
 		case APK_VERSION_GREATER:
 			msg = "Upgrading";
 			break;
+		}
+		if (msg && !(step & APK_INSTALL_COMMIT)) {
+			msg = "Fetching";
 		}
 	}
 	if (msg == NULL)
@@ -259,7 +278,7 @@ int apk_solver_commit_changeset(struct apk_database *db,
 				struct apk_changeset *changeset,
 				struct apk_dependency_array *world)
 {
-	struct progress prog;
+	struct progress prog, _prog;
 	struct apk_change *change;
 	char buf[32], size_unit;
 	ssize_t size_diff = 0;
@@ -321,26 +340,36 @@ int apk_solver_commit_changeset(struct apk_database *db,
 	if (run_commit_hooks(db, PRE_COMMIT_HOOK) == -2)
 		return -1;
 
-	/* Go through changes */
-	foreach_array_item(change, changeset->changes) {
-		r = change->old_pkg &&
-			(change->old_pkg->ipkg->broken_files ||
-			 change->old_pkg->ipkg->broken_script);
-		if (print_change(db, change, prog.done.changes, prog.total.changes)) {
-			prog.pkg = change->new_pkg;
-			progress_cb(&prog, 0);
+	uint32_t steps[3] = { APK_INSTALL_DOWNLOAD, APK_INSTALL_COMMIT, 0 };
+	if (!apk_db_cache_active(db)) {
+		steps[0] = APK_INSTALL_DOWNLOAD | APK_INSTALL_COMMIT;
+		steps[1] = 0;
+	}
 
-			if (!(apk_flags & APK_SIMULATE) &&
-			    ((change->old_pkg != change->new_pkg) ||
-			     (change->reinstall && pkg_available(db, change->new_pkg)))) {
-				r = apk_db_install_pkg(db, change->old_pkg, change->new_pkg,
-						       progress_cb, &prog) != 0;
+	memcpy(&_prog, &prog, sizeof(prog));
+	/* Go through changes */
+	for (int i = 0; steps[i]; ++i) {
+		memcpy(&prog, &_prog, sizeof(prog));
+		foreach_array_item(change, changeset->changes) {
+			r = change->old_pkg && change->old_pkg->ipkg &&
+				(change->old_pkg->ipkg->broken_files ||
+				 change->old_pkg->ipkg->broken_script);
+			if (print_change(db, change, steps[i], prog.done.changes, prog.total.changes)) {
+				prog.pkg = change->new_pkg;
+				progress_cb(&prog, 0);
+
+				if (!(apk_flags & APK_SIMULATE) &&
+				    ((change->old_pkg != change->new_pkg) ||
+				     (change->reinstall && pkg_available(db, change->new_pkg)))) {
+					r = apk_db_install_pkg(db, change->old_pkg, change->new_pkg,
+							       steps[i], progress_cb, &prog) != 0;
+				}
+				if (r == 0 && change->new_pkg && change->new_pkg->ipkg)
+					change->new_pkg->ipkg->repository_tag = change->new_repository_tag;
 			}
-			if (r == 0 && change->new_pkg && change->new_pkg->ipkg)
-				change->new_pkg->ipkg->repository_tag = change->new_repository_tag;
+			errors += r;
+			count_change(change, &prog.done);
 		}
-		errors += r;
-		count_change(change, &prog.done);
 	}
 	apk_print_progress(prog.total.bytes + prog.total.packages,
 			   prog.total.bytes + prog.total.packages);
@@ -625,7 +654,7 @@ void apk_solver_print_errors(struct apk_database *db,
 	 *   b-1:
 	 *     satisfies: world[b]
 	 *     conflicts: a-1[foo]
-	 * 
+	 *
 	 *   c-1:
 	 *     satisfies: world[a]
 	 *     conflicts: c-1[foo]  (self-conflict by providing foo twice)
@@ -641,7 +670,7 @@ void apk_solver_print_errors(struct apk_database *db,
 	 * satisfies lists all dependencies that is not satisfiable by
 	 * any other selected version. or all of them with -v.
 	 */
- 
+
 	apk_error("unsatisfiable constraints:");
 
 	/* Construct information about names */

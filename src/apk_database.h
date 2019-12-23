@@ -12,6 +12,8 @@
 #ifndef APK_PKGDB_H
 #define APK_PKGDB_H
 
+#include <stdint.h>
+
 #include "apk_version.h"
 #include "apk_hash.h"
 #include "apk_archive.h"
@@ -192,6 +194,11 @@ typedef union apk_database_or_void {
 	void *ptr;
 } apk_database_t __attribute__ ((__transparent_union__));
 
+enum apk_install_operation {
+	APK_INSTALL_DOWNLOAD 	= 1 << 0,
+	APK_INSTALL_COMMIT 	= 1 << 1,
+};
+
 struct apk_name *apk_db_get_name(struct apk_database *db, apk_blob_t name);
 struct apk_name *apk_db_query_name(struct apk_database *db, apk_blob_t name);
 int apk_db_get_tag_id(struct apk_database *db, apk_blob_t tag);
@@ -261,6 +268,7 @@ int apk_db_cache_foreach_item(struct apk_database *db, apk_cache_item_cb cb);
 int apk_db_install_pkg(struct apk_database *db,
 		       struct apk_package *oldpkg,
 		       struct apk_package *newpkg,
+		       uint32_t install_ops,
 		       apk_progress_cb cb, void *cb_ctx);
 
 void apk_name_foreach_matching(struct apk_database *db, struct apk_string_array *filter, unsigned int match,
