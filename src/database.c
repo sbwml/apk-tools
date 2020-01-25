@@ -2343,7 +2343,7 @@ static struct apk_db_dir_instance *apk_db_install_directory_entry(struct install
 
 #define TMPNAME_MAX	(PATH_MAX + 64)
 
-static const char *format_tmpname(struct apk_package *pkg, struct apk_db_file *f, char tmpname[static TMPNAME_MAX])
+static const char *format_tmpname(struct apk_package *pkg, struct apk_db_file *f, char* tmpname)
 {
 	EVP_MD_CTX *mdctx;
 	unsigned char md[EVP_MAX_MD_SIZE];
