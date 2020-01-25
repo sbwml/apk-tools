@@ -2284,7 +2284,7 @@ static void extract_cb(void *_ctx, size_t bytes_done)
 	struct install_ctx *ctx = (struct install_ctx *) _ctx;
 	if (!ctx->cb)
 		return;
-	ctx->cb(ctx->cb_ctx, min(ctx->installed_size + bytes_done, ctx->pkg->installed_size));
+	ctx->cb(ctx->cb_ctx, _min(ctx->installed_size + bytes_done, ctx->pkg->installed_size));
 }
 
 static void apk_db_run_pending_script(struct install_ctx *ctx)

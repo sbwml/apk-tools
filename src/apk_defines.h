@@ -18,8 +18,8 @@
 
 #define ARRAY_SIZE(x)	(sizeof(x) / sizeof((x)[0]))
 #define BIT(x)		(1 << (x))
-#define min(a, b)	((a) < (b) ? (a) : (b))
-#define max(a, b)	((a) > (b) ? (a) : (b))
+#define _min(a, b)	((a) < (b) ? (a) : (b))
+#define _max(a, b)	((a) > (b) ? (a) : (b))
 
 #ifndef TRUE
 #define TRUE 1

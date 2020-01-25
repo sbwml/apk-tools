@@ -68,7 +68,7 @@ const char *apk_get_human_size(off_t size, off_t *dest)
 		s /= 1024;
 
 	if (dest) *dest = s;
-	return apk_size_units[min(i, ARRAY_SIZE(apk_size_units) - 1)];
+	return apk_size_units[_min(i, ARRAY_SIZE(apk_size_units) - 1)];
 }
 
 void apk_print_progress(size_t done, size_t total)

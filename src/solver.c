@@ -222,7 +222,7 @@ static void discover_name(struct apk_solver_state *ss, struct apk_name *name)
 
 			foreach_array_item(dep, pkg->depends) {
 				discover_name(ss, dep->name);
-				pkg->ss.max_dep_chain = max(pkg->ss.max_dep_chain,
+				pkg->ss.max_dep_chain = _max(pkg->ss.max_dep_chain,
 							    dep->name->ss.max_dep_chain+1);
 			}
 
@@ -235,7 +235,7 @@ static void discover_name(struct apk_solver_state *ss, struct apk_name *name)
 		}
 
 		name->ss.no_iif &= pkg->ss.iif_failed;
-		name->ss.max_dep_chain = max(name->ss.max_dep_chain, pkg->ss.max_dep_chain);
+		name->ss.max_dep_chain = _max(name->ss.max_dep_chain, pkg->ss.max_dep_chain);
 
 		dbg_printf("discover %s: max_dep_chain=%d no_iif=%d\n",
 			name->name, name->ss.max_dep_chain, name->ss.no_iif);

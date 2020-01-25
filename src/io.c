@@ -64,7 +64,7 @@ ssize_t apk_istream_read(struct apk_istream *is, void *_ptr, size_t size)
 
 	while (left) {
 		if (is->ptr != is->end) {
-			r = min(left, is->end - is->ptr);
+			r = _min(left, is->end - is->ptr);
 			if (ptr) {
 				memcpy(ptr, is->ptr, r);
 				ptr += r;
@@ -138,7 +138,7 @@ apk_blob_t apk_istream_get(struct apk_istream *is, size_t len)
 		return ret;
 	}
 
-	return (struct apk_blob) { .len = is->err < 0 ? is->err : 0 };
+	return APK_BLOB_PTR_LEN(NULL, _min(is->err, 0));
 }
 
 apk_blob_t apk_istream_get_all(struct apk_istream *is)
@@ -152,7 +152,7 @@ apk_blob_t apk_istream_get_all(struct apk_istream *is)
 		return ret;
 	}
 
-	return (struct apk_blob) { .len = is->err < 0 ? is->err : 0 };
+	return APK_BLOB_PTR_LEN(NULL, _min(is->err, 0));
 }
 
 apk_blob_t apk_istream_get_delim(struct apk_istream *is, apk_blob_t token)
@@ -178,7 +178,7 @@ apk_blob_t apk_istream_get_delim(struct apk_istream *is, apk_blob_t token)
 		is->end = (uint8_t*)left.ptr + left.len;
 		return ret;
 	}
-	return (struct apk_blob) { .len = is->err < 0 ? is->err : 0 };
+	return APK_BLOB_PTR_LEN(NULL, _min(is->err, 0));
 }
 
 static void segment_get_meta(struct apk_istream *is, struct apk_file_meta *meta)
@@ -513,20 +513,20 @@ ssize_t apk_istream_splice(struct apk_istream *is, int fd, size_t size,
 			else if (r == EBADF || r == EFBIG || r == ENOSPC || r == EIO)
 				return -r;
 		}
-		bufsz = min(bufsz, 2*1024*1024);
+		bufsz = _min(bufsz, 2*1024*1024);
 		buf = mmapbase;
 	}
 	if (mmapbase == MAP_FAILED) {
 		if (!splice_buffer) splice_buffer = malloc(256*1024);
 		buf = (unsigned char*)splice_buffer;
 		if (!buf) return -ENOMEM;
-		bufsz = min(bufsz, 256*1024);
+		bufsz = _min(bufsz, 256*1024);
 	}
 
 	while (done < size) {
 		if (cb != NULL) cb(cb_ctx, done);
 
-		togo = min(size - done, bufsz);
+		togo = _min(size - done, bufsz);
 		r = apk_istream_read(is, buf, togo);
 		if (r <= 0) {
 			if (r) goto err;
