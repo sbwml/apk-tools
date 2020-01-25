@@ -21,6 +21,8 @@
 #include "apk_provider_data.h"
 #include "apk_solver_data.h"
 
+extern const char* const apk_installed_file;
+
 struct apk_name;
 APK_ARRAY(apk_name_array, struct apk_name *);
 

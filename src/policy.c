@@ -15,8 +15,6 @@
 #include "apk_version.h"
 #include "apk_print.h"
 
-extern const char * const apk_installed_file;
-
 static void print_policy(struct apk_database *db, const char *match, struct apk_name *name, void *ctx)
 {
 	struct apk_provider *p;
