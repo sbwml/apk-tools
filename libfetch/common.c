@@ -210,7 +210,7 @@ fetch_reopen(int sd)
 	conn_t *conn;
 
 	/* allocate and fill connection structure */
-	if ((conn = calloc(1, sizeof(*conn))) == NULL)
+	if ((conn = (conn_t*)calloc(1, sizeof(*conn))) == NULL)
 		return (NULL);
 	conn->ftp_home = NULL;
 	conn->cache_url = NULL;
@@ -675,7 +675,7 @@ fetch_getln(conn_t *conn)
 	ssize_t len;
 
 	if (conn->buf == NULL) {
-		if ((conn->buf = malloc(MIN_BUF_SIZE)) == NULL) {
+		if ((conn->buf = (char*)malloc(MIN_BUF_SIZE)) == NULL) {
 			errno = ENOMEM;
 			return (-1);
 		}
@@ -697,7 +697,7 @@ fetch_getln(conn_t *conn)
 			return (-1);
 		if (len == 0)
 			break;
-		next = memchr(conn->buf + conn->buflen, '\n', len);
+		next = (char*)memchr(conn->buf + conn->buflen, '\n', len);
 		conn->buflen += len;
 		if (conn->buflen == conn->bufsize && next == NULL) {
 			tmp = conn->buf;
@@ -706,7 +706,7 @@ fetch_getln(conn_t *conn)
 				errno = ENOMEM;
 				return (-1);
 			}
-			if ((tmp = realloc(tmp, tmpsize)) == NULL) {
+			if ((tmp = (char*)realloc(tmp, tmpsize)) == NULL) {
 				errno = ENOMEM;
 				return (-1);
 			}
@@ -853,7 +853,7 @@ fetch_add_entry(struct url_list *ue, struct url *base, const char *name,
 			++name_len;
 	}
 
-	tmp_name = malloc( base_doc_len + name_len + 1);
+	tmp_name = (char*)malloc( base_doc_len + name_len + 1);
 	if (tmp_name == NULL) {
 		errno = ENOMEM;
 		fetch_syserr();
@@ -861,7 +861,7 @@ fetch_add_entry(struct url_list *ue, struct url *base, const char *name,
 	}
 
 	if (ue->length + 1 >= ue->alloc_size) {
-		tmp = realloc(ue->urls, (ue->alloc_size * 2 + 1) * sizeof(*tmp));
+		tmp = (struct url*)realloc(ue->urls, (ue->alloc_size * 2 + 1) * sizeof(*tmp));
 		if (tmp == NULL) {
 			free(tmp_name);
 			errno = ENOMEM;
@@ -927,7 +927,7 @@ fetchAppendURLList(struct url_list *dst, const struct url_list *src)
 	if (len > dst->alloc_size) {
 		struct url *tmp;
 
-		tmp = realloc(dst->urls, len * sizeof(*tmp));
+		tmp = (struct url*)realloc(dst->urls, len * sizeof(*tmp));
 		if (tmp == NULL) {
 			errno = ENOMEM;
 			fetch_syserr();
@@ -1121,7 +1121,7 @@ fetchIO_unopen(void *io_cookie, ssize_t (*io_read)(void *, void *, size_t),
 {
 	fetchIO *f;
 
-	f = malloc(sizeof(*f));
+	f = (fetchIO*)malloc(sizeof(*f));
 	if (f == NULL)
 		return f;
 

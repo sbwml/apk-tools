@@ -110,7 +110,7 @@ fetchXGetFile(struct url *u, struct url_stat *us, const char *flags)
 		return NULL;
 	}
 
-	cookie = malloc(sizeof(int));
+	cookie = (int*)malloc(sizeof(int));
 	if (cookie == NULL) {
 		close(fd);
 		fetch_syserr();
@@ -162,7 +162,7 @@ fetchPutFile(struct url *u, const char *flags)
 		return NULL;
 	}
 
-	cookie = malloc(sizeof(int));
+	cookie = (int*)malloc(sizeof(int));
 	if (cookie == NULL) {
 		close(fd);
 		fetch_syserr();

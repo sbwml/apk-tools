@@ -170,7 +170,7 @@ http_growbuf(struct httpio *io, size_t len)
 	if (io->bufsize >= len)
 		return (0);
 
-	if ((tmp = realloc(io->buf, len)) == NULL)
+	if ((tmp = (char*)realloc(io->buf, len)) == NULL)
 		return (-1);
 	io->buf = tmp;
 	io->bufsize = len;
@@ -324,7 +324,7 @@ http_funopen(conn_t *conn, int chunked, int keep_alive, off_t clength)
 	struct httpio *io;
 	fetchIO *f;
 
-	if ((io = calloc(1, sizeof(*io))) == NULL) {
+	if ((io = (struct httpio*)calloc(1, sizeof(*io))) == NULL) {
 		fetch_syserr();
 		return (NULL);
 	}
@@ -496,10 +496,12 @@ http_next_header(conn_t *conn, const char **p)
 static int
 http_parse_mtime(const char *p, time_t *mtime)
 {
-	char *locale, *r;
+	char *locale, *r, *l;
 	struct tm tm;
 
-	locale = strdupa(setlocale(LC_TIME, NULL));
+	l = setlocale(LC_TIME, NULL);
+	locale = (char*)calloc(strlen(l) + 1, sizeof(char));
+	locale = strcpy(locale, l);
 	setlocale(LC_TIME, "C");
 	r = strptime(p, "%a, %d %b %Y %H:%M:%S GMT", &tm);
 	/* XXX should add support for date-2 and date-3 */
@@ -583,7 +585,7 @@ http_base64(const char *src)
 	int t, r;
 
 	l = strlen(src);
-	if ((str = malloc(((l + 2) / 3) * 4 + 1)) == NULL)
+	if ((str = (char*)malloc(((l + 2) / 3) * 4 + 1)) == NULL)
 		return (NULL);
 	dst = str;
 	r = 0;
@@ -1422,7 +1424,7 @@ parse_index(struct index_parser *parser, const char *buf, size_t len)
 		return 1;
 	case ST_HREFQ:
 		/* In href of the a-tag */
-		end_attr = memchr(buf, '"', len);
+		end_attr = (char*)memchr(buf, '"', len);
 		if (end_attr == NULL)
 			return 0;
 		*end_attr = '\0';
@@ -1476,7 +1478,7 @@ fetchListHTTP(struct url_list *ue, struct url *url, const char *pattern, const c
 			return fetchAppendURLList(ue, &cache->ue);
 		}
 
-		cache = malloc(sizeof(*cache));
+		cache = (struct http_index_cache*)malloc(sizeof(*cache));
 		fetchInitURLList(&cache->ue);
 		cache->location = fetchCopyURL(url);
 	}

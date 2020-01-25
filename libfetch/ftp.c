@@ -250,7 +250,7 @@ ftp_pwd(conn_t *conn, char **pwd)
 	src = conn->buf + 4;
 	if (src >= end || *src++ != '"')
 		return (FTP_PROTOCOL_ERROR);
-	*pwd = malloc(end - src + 1);
+	*pwd = (char*)malloc(end - src + 1);
 	if (*pwd == NULL)
 		return (FTP_PROTOCOL_ERROR);
 	for (q = 0, dst = *pwd; src < end; ++src) {
@@ -554,7 +554,7 @@ ftp_readfn(void *v, void *buf, size_t len)
 	}
 	if (io->eof)
 		return (0);
-	r = fetch_read(io->dconn, buf, len);
+	r = fetch_read(io->dconn, (char*)buf, len);
 	if (r > 0)
 		return (r);
 	if (r == 0) {
@@ -633,7 +633,7 @@ ftp_setup(conn_t *cconn, conn_t *dconn, int mode)
 
 	if (cconn == NULL || dconn == NULL)
 		return (NULL);
-	if ((io = malloc(sizeof(*io))) == NULL)
+	if ((io = (struct ftpio*)malloc(sizeof(*io))) == NULL)
 		return (NULL);
 	io->cconn = cconn;
 	io->dconn = dconn;
@@ -889,7 +889,7 @@ retry_mode:
 					goto ouch;
 			}
 			if (e != FTP_OK) {
-				unsigned char *ap = (void *)&u.sin6.sin6_addr.s6_addr;
+				unsigned char *ap = (unsigned char *)&u.sin6.sin6_addr.s6_addr;
 				uint16_t port = ntohs(u.sin6.sin6_port);
 				e = ftp_cmd(conn,
 				    "LPRT %d,%d,%u,%u,%u,%u,%u,%u,%u,%u,"
@@ -1244,7 +1244,7 @@ fetchListFTP(struct url_list *ue, struct url *url, const char *pattern, const ch
 
 	while ((len = fetchIO_read(f, buf + cur_off, sizeof(buf) - cur_off)) > 0) {
 		cur_off += len;
-		while ((eol = memchr(buf, '\n', cur_off)) != NULL) {
+		while ((eol = (char*)memchr(buf, '\n', cur_off)) != NULL) {
 			if (len == eol - buf)
 				break;
 			if (eol != buf) {
