@@ -22,7 +22,7 @@ typedef const unsigned char *apk_spn_match;
 typedef unsigned char apk_spn_match_def[256 / 8];
 
 struct apk_blob {
-	long len;
+	ssize_t len;
 	char *ptr;
 };
 typedef struct apk_blob apk_blob_t;
@@ -71,14 +71,14 @@ static inline const EVP_MD *apk_checksum_default(void)
 #define APK_BLOB_BUF(buf)		((apk_blob_t){sizeof(buf), (char *)(buf)})
 #define APK_BLOB_CSUM(csum)		((apk_blob_t){(csum).type, (char *)(csum).data})
 #define APK_BLOB_STRUCT(s)		((apk_blob_t){sizeof(s), (char*)&(s)})
-#define APK_BLOB_PTR_LEN(beg,len)	((apk_blob_t){(len), (beg)})
-#define APK_BLOB_PTR_PTR(beg,end)	APK_BLOB_PTR_LEN((beg),(end)-(beg)+1)
+#define APK_BLOB_PTR_LEN(beg,len)	((apk_blob_t){(len), (char*)(beg)})
+#define APK_BLOB_PTR_PTR(beg,end)	APK_BLOB_PTR_LEN((char*)(beg), (char*)(end) - (char*)(beg) + 1)
 
 static inline apk_blob_t APK_BLOB_STR(const char *str)
 {
 	if (str == NULL)
 		return APK_BLOB_NULL;
-	return ((apk_blob_t){strlen(str), (void *)(str)});
+	return ((apk_blob_t){(ssize_t)strlen(str), (char*)str});
 }
 
 static inline apk_blob_t apk_blob_trim(apk_blob_t blob)
@@ -109,7 +109,7 @@ static inline void apk_blob_checksum(apk_blob_t b, const EVP_MD *md, struct apk_
 }
 static inline char *apk_blob_chr(apk_blob_t b, unsigned char ch)
 {
-	return memchr(b.ptr, ch, b.len);
+	return (char*)memchr(b.ptr, ch, b.len);
 }
 
 static inline const int apk_checksum_compare(const struct apk_checksum *a,

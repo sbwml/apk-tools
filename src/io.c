@@ -57,8 +57,9 @@ void apk_file_meta_to_fd(int fd, struct apk_file_meta *meta)
 	futimens(fd, times);
 }
 
-ssize_t apk_istream_read(struct apk_istream *is, void *ptr, size_t size)
+ssize_t apk_istream_read(struct apk_istream *is, void *_ptr, size_t size)
 {
+	char* ptr = (char*)_ptr;
 	ssize_t left = size, r = 0;
 
 	while (left) {
@@ -74,7 +75,7 @@ ssize_t apk_istream_read(struct apk_istream *is, void *ptr, size_t size)
 		}
 		if (is->err) break;
 
-		if (ptr && left > is->buf_size/4) {
+		if (ptr && left > (ssize_t)is->buf_size/4) {
 			r = is->ops->read(is, ptr, left);
 			if (r <= 0) break;
 			left -= r;
@@ -90,8 +91,8 @@ ssize_t apk_istream_read(struct apk_istream *is, void *ptr, size_t size)
 	}
 
 	if (r < 0) return r;
-	if (size && left == size && !is->err) is->err = 1;
-	if (size == left) return is->err < 0 ? is->err : 0;
+	if (size && left == (ssize_t)size && !is->err) is->err = 1;
+	if ((ssize_t)size == left) return is->err < 0 ? is->err : 0;
 	return size - left;
 }
 
@@ -122,11 +123,11 @@ apk_blob_t apk_istream_get(struct apk_istream *is, size_t len)
 	apk_blob_t ret = APK_BLOB_NULL;
 
 	do {
-		if (is->end - is->ptr >= len) {
-			ret = APK_BLOB_PTR_LEN((char*)is->ptr, len);
+		if (is->end - is->ptr >= (ssize_t)len) {
+			ret = APK_BLOB_PTR_LEN((char*)is->ptr, (ssize_t)len);
 			break;
 		}
-		if (is->err>0 || is->end-is->ptr == is->buf_size) {
+		if (is->err>0 || is->end - is->ptr == (ssize_t)is->buf_size) {
 			ret = APK_BLOB_PTR_LEN((char*)is->ptr, is->end - is->ptr);
 			break;
 		}
@@ -145,7 +146,7 @@ apk_blob_t apk_istream_get_all(struct apk_istream *is)
 	if (is->ptr == is->end)
 		__apk_istream_fill(is);
 
-	if (is->ptr != is->end) {
+	if (is->ptr < is->end) {
 		apk_blob_t ret = APK_BLOB_PTR_LEN((char*)is->ptr, is->end - is->ptr);
 		is->ptr = is->end = 0;
 		return ret;
@@ -161,7 +162,7 @@ apk_blob_t apk_istream_get_delim(struct apk_istream *is, apk_blob_t token)
 	do {
 		if (apk_blob_split(APK_BLOB_PTR_LEN((char*)is->ptr, is->end - is->ptr), token, &ret, &left))
 			break;
-		if (is->end - is->ptr == is->buf_size) {
+		if (is->end - is->ptr == (ssize_t)is->buf_size) {
 			is->err = -ENOBUFS;
 			break;
 		}
@@ -237,7 +238,7 @@ struct apk_istream *apk_istream_segment(struct apk_segment_istream *sis, struct 
 		.bytes_left = len,
 		.mtime = mtime,
 	};
-	if (sis->is.end - sis->is.ptr > len) {
+	if (sis->is.end - sis->is.ptr > (ssize_t)len) {
 		sis->is.end = sis->is.ptr + len;
 		is->ptr += len;
 	} else {
@@ -265,7 +266,7 @@ static void tee_get_meta(struct apk_istream *is, struct apk_file_meta *meta)
 static ssize_t __tee_write(struct apk_tee_istream *tee, void *ptr, size_t size)
 {
 	ssize_t w = write(tee->fd, ptr, size);
-	if (size != w) {
+	if ((ssize_t)size != w) {
 		if (w < 0) return w;
 		return -ENOSPC;
 	}
@@ -311,7 +312,7 @@ struct apk_istream *apk_istream_tee(struct apk_istream *from, int atfd, const ch
 	struct apk_tee_istream *tee;
 	int fd, r;
 
-	if (IS_ERR_OR_NULL(from)) return ERR_CAST(from);
+	if (IS_ERR_OR_NULL(from)) return (struct apk_istream*)ERR_CAST(from);
 
 	fd = openat(atfd, to, O_CREAT | O_RDWR | O_TRUNC | O_CLOEXEC,
 		    S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
@@ -320,7 +321,7 @@ struct apk_istream *apk_istream_tee(struct apk_istream *from, int atfd, const ch
 		goto err_is;
 	}
 
-	tee = malloc(sizeof *tee);
+	tee = (struct apk_tee_istream*)malloc(sizeof *tee);
 	if (!tee) {
 		r = -ENOMEM;
 		goto err_fd;
@@ -351,7 +352,7 @@ err_fd:
 	close(fd);
 err_is:
 	apk_istream_close(from);
-	return ERR_PTR(r);
+	return (struct apk_istream*)ERR_PTR(r);
 }
 
 struct apk_mmap_istream {
@@ -389,17 +390,17 @@ static inline struct apk_istream *apk_mmap_istream_from_fd(int fd)
 {
 	struct apk_mmap_istream *mis;
 	struct stat st;
-	void *ptr;
+	uint8_t *ptr;
 
-	if (fstat(fd, &st) < 0) return ERR_PTR(-errno);
+	if (fstat(fd, &st) < 0) return (struct apk_istream*)ERR_PTR(-errno);
 
-	ptr = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
-	if (ptr == MAP_FAILED) return ERR_PTR(-errno);
+	ptr = (uint8_t*)mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+	if (ptr == MAP_FAILED) return (struct apk_istream*)ERR_PTR(-errno);
 
-	mis = malloc(sizeof *mis);
+	mis = (struct apk_mmap_istream*)malloc(sizeof *mis);
 	if (mis == NULL) {
 		munmap(ptr, st.st_size);
-		return ERR_PTR(-ENOMEM);
+		return (struct apk_istream*)ERR_PTR(-ENOMEM);
 	}
 
 	*mis = (struct apk_mmap_istream) {
@@ -454,12 +455,12 @@ struct apk_istream *apk_istream_from_fd(int fd)
 {
 	struct apk_fd_istream *fis;
 
-	if (fd < 0) return ERR_PTR(-EBADF);
+	if (fd < 0) return (struct apk_istream*)ERR_PTR(-EBADF);
 
-	fis = malloc(sizeof(*fis) + apk_io_bufsize);
+	fis = (struct apk_fd_istream*)malloc(sizeof(*fis) + apk_io_bufsize);
 	if (fis == NULL) {
 		close(fd);
-		return ERR_PTR(-ENOMEM);
+		return (struct apk_istream*)ERR_PTR(-ENOMEM);
 	}
 
 	*fis = (struct apk_fd_istream) {
@@ -477,7 +478,7 @@ struct apk_istream *apk_istream_from_file(int atfd, const char *file)
 	int fd;
 
 	fd = openat(atfd, file, O_RDONLY | O_CLOEXEC);
-	if (fd < 0) return ERR_PTR(-errno);
+	if (fd < 0) return (struct apk_istream*)ERR_PTR(-errno);
 
 	if (0) {
 		struct apk_istream *is = apk_mmap_istream_from_fd(fd);
@@ -490,7 +491,7 @@ ssize_t apk_istream_splice(struct apk_istream *is, int fd, size_t size,
 			   apk_progress_cb cb, void *cb_ctx)
 {
 	static void *splice_buffer = NULL;
-	unsigned char *buf, *mmapbase = MAP_FAILED;
+	unsigned char *buf, *mmapbase = (unsigned char*)MAP_FAILED;
 	size_t bufsz, done = 0, togo;
 	ssize_t r;
 
@@ -499,7 +500,7 @@ ssize_t apk_istream_splice(struct apk_istream *is, int fd, size_t size,
 		if (size != APK_SPLICE_ALL) {
 			r = posix_fallocate(fd, 0, size);
 			if (r == 0)
-				mmapbase = mmap(NULL, size, PROT_READ | PROT_WRITE,
+				mmapbase = (unsigned char*)mmap(NULL, size, PROT_READ | PROT_WRITE,
 						MAP_SHARED, fd, 0);
 			else if (r == EBADF || r == EFBIG || r == ENOSPC || r == EIO)
 				return -r;
@@ -509,7 +510,7 @@ ssize_t apk_istream_splice(struct apk_istream *is, int fd, size_t size,
 	}
 	if (mmapbase == MAP_FAILED) {
 		if (!splice_buffer) splice_buffer = malloc(256*1024);
-		buf = splice_buffer;
+		buf = (unsigned char*)splice_buffer;
 		if (!buf) return -ENOMEM;
 		bufsz = min(bufsz, 256*1024);
 	}
@@ -560,7 +561,7 @@ apk_blob_t apk_blob_from_istream(struct apk_istream *is, size_t size)
 		free(ptr);
 		return APK_BLOB_NULL;
 	}
-	if (rsize != size)
+	if (rsize != (ssize_t)size)
 		ptr = realloc(ptr, rsize);
 
 	return APK_BLOB_PTR_LEN(ptr, rsize);
@@ -579,7 +580,7 @@ apk_blob_t apk_blob_from_file(int atfd, const char *file)
 	if (fstat(fd, &st) < 0)
 		goto err_fd;
 
-	buf = malloc(st.st_size);
+	buf = (char*)malloc(st.st_size);
 	if (buf == NULL)
 		goto err_fd;
 
@@ -627,7 +628,8 @@ int apk_blob_to_file(int atfd, const char *file, apk_blob_t b, unsigned int flag
 
 static int cmp_xattr(const void *p1, const void *p2)
 {
-	const struct apk_xattr *d1 = p1, *d2 = p2;
+	const struct apk_xattr *d1 = (const struct apk_xattr*)p1, \
+		*d2 = (const struct apk_xattr*)p2;
 	return strcmp(d1->name, d2->name);
 }
 
@@ -731,7 +733,7 @@ int apk_fileinfo_get(int atfd, const char *filename, unsigned int flags,
 
 	/* Checksum file content */
 	if ((flags & APK_FI_NOFOLLOW) && S_ISLNK(st.st_mode)) {
-		char *target = alloca(st.st_size);
+		char *target = (char*)alloca(st.st_size);
 		if (target == NULL)
 			return -ENOMEM;
 		if (readlinkat(atfd, filename, target, st.st_size) < 0)
@@ -819,8 +821,8 @@ static ssize_t safe_write(int fd, const void *ptr, size_t size)
 {
 	ssize_t i = 0, r;
 
-	while (i < size) {
-		r = write(fd, ptr + i, size - i);
+	while (i < (ssize_t)size) {
+		r = write(fd, (char*)ptr + i, size - i);
 		if (r < 0)
 			return -errno;
 		if (r == 0)
@@ -838,7 +840,7 @@ static ssize_t fdo_flush(struct apk_fd_ostream *fos)
 	if (fos->bytes == 0)
 		return 0;
 
-	if ((r = safe_write(fos->fd, fos->buffer, fos->bytes)) != fos->bytes) {
+	if ((r = safe_write(fos->fd, fos->buffer, fos->bytes)) != (ssize_t)fos->bytes) {
 		fos->rc = r < 0 ? r : -EIO;
 		return r;
 	}
@@ -858,7 +860,7 @@ static ssize_t fdo_write(struct apk_ostream *os, const void *ptr, size_t size)
 			return r;
 		if (size >= sizeof(fos->buffer) / 2) {
 			r = safe_write(fos->fd, ptr, size);
-			if (r != size)
+			if (r != (ssize_t)size)
 				fos->rc = r < 0 ? r : -EIO;
 			return r;
 		}
@@ -904,12 +906,12 @@ struct apk_ostream *apk_ostream_to_fd(int fd)
 {
 	struct apk_fd_ostream *fos;
 
-	if (fd < 0) return ERR_PTR(-EBADF);
+	if (fd < 0) return (struct apk_ostream*)ERR_PTR(-EBADF);
 
-	fos = malloc(sizeof(struct apk_fd_ostream));
+	fos = (struct apk_fd_ostream*)malloc(sizeof(struct apk_fd_ostream));
 	if (fos == NULL) {
 		close(fd);
-		return ERR_PTR(-ENOMEM);
+		return (struct apk_ostream *)ERR_PTR(-ENOMEM);
 	}
 
 	*fos = (struct apk_fd_ostream) {
@@ -929,12 +931,12 @@ struct apk_ostream *apk_ostream_to_file(int atfd,
 	int fd;
 
 	fd = openat(atfd, tmpfile ?: file, O_CREAT | O_RDWR | O_TRUNC | O_CLOEXEC, mode);
-	if (fd < 0) return ERR_PTR(-errno);
+	if (fd < 0) return (struct apk_ostream*)ERR_PTR(-errno);
 
 	fcntl(fd, F_SETFD, FD_CLOEXEC);
 
 	os = apk_ostream_to_fd(fd);
-	if (IS_ERR_OR_NULL(os)) return ERR_CAST(os);
+	if (IS_ERR_OR_NULL(os)) return (struct apk_ostream *)ERR_CAST(os);
 
 	if (tmpfile != NULL) {
 		struct apk_fd_ostream *fos =
@@ -976,7 +978,7 @@ struct apk_ostream *apk_ostream_counter(off_t *counter)
 {
 	struct apk_counter_ostream *cos;
 
-	cos = malloc(sizeof(struct apk_counter_ostream));
+	cos = (struct apk_counter_ostream*)malloc(sizeof(struct apk_counter_ostream));
 	if (cos == NULL)
 		return NULL;
 
@@ -993,7 +995,7 @@ size_t apk_ostream_write_string(struct apk_ostream *os, const char *string)
 	size_t len;
 
 	len = strlen(string);
-	if (apk_ostream_write(os, string, len) != len)
+	if (apk_ostream_write(os, string, len) != (ssize_t)len)
 		return -1;
 
 	return len;
@@ -1034,7 +1036,7 @@ static struct cache_item *resolve_cache_item(struct apk_hash *hash, apk_blob_t n
 	if (ci != NULL)
 		return ci;
 
-	ci = calloc(1, sizeof(struct cache_item) + name.len);
+	ci = (struct cache_item*)calloc(1, sizeof(struct cache_item) + name.len);
 	if (ci == NULL)
 		return NULL;
 
@@ -1082,7 +1084,7 @@ uid_t apk_resolve_uid(struct apk_id_cache *idc, const char *username, uid_t defa
 
 	if (ci->genid != idc->genid) {
 		ci->genid = idc->genid;
-		ci->uid = -1;
+		ci->uid = (uid_t)-1;
 
 		in = fdopen(openat(idc->root_fd, "etc/passwd", O_RDONLY|O_CLOEXEC), "r");
 		if (in != NULL) {
@@ -1103,7 +1105,7 @@ uid_t apk_resolve_uid(struct apk_id_cache *idc, const char *username, uid_t defa
 		}
 	}
 
-	if (ci->uid != -1)
+	if (ci->uid != (uid_t)-1)
 		return ci->uid;
 
 	return default_uid;
@@ -1125,7 +1127,7 @@ uid_t apk_resolve_gid(struct apk_id_cache *idc, const char *groupname, uid_t def
 
 	if (ci->genid != idc->genid) {
 		ci->genid = idc->genid;
-		ci->gid = -1;
+		ci->gid = (gid_t)-1;
 
 		in = fdopen(openat(idc->root_fd, "etc/group", O_RDONLY|O_CLOEXEC), "r");
 		if (in != NULL) {
@@ -1146,7 +1148,7 @@ uid_t apk_resolve_gid(struct apk_id_cache *idc, const char *groupname, uid_t def
 		}
 	}
 
-	if (ci->gid != -1)
+	if (ci->gid != (gid_t)-1)
 		return ci->gid;
 
 	return default_gid;

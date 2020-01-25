@@ -83,7 +83,7 @@ struct audit_tree_ctx {
 	struct audit_ctx *actx;
 	struct apk_database *db;
 	struct apk_db_dir *dir;
-	size_t pathlen;
+	ssize_t pathlen;
 	char path[PATH_MAX];
 };
 
@@ -179,7 +179,7 @@ static int audit_directory_tree_item(void *ctx, int dirfd, const char *name)
 	struct apk_file_info fi;
 	int reason = 0;
 
-	if (bdir.len + bent.len + 1 >= sizeof(atctx->path)) return 0;
+	if (bdir.len + bent.len + 1 >= (ssize_t)sizeof(atctx->path)) return 0;
 	if (apk_fileinfo_get(dirfd, name, APK_FI_NOFOLLOW, &fi) < 0) return 0;
 
 	memcpy(&atctx->path[atctx->pathlen], bent.ptr, bent.len);
@@ -292,8 +292,8 @@ static int audit_directory_tree(struct audit_tree_ctx *atctx, int dirfd)
 
 static int audit_missing_files(apk_hash_item item, void *pctx)
 {
-	struct audit_ctx *actx = pctx;
-	struct apk_db_file *file = item;
+	struct audit_ctx *actx = (struct audit_ctx*)pctx;
+	struct apk_db_file *file = (struct apk_db_file*)item;
 	struct apk_db_dir *dir;
 	char path[PATH_MAX];
 	int len;

@@ -79,7 +79,7 @@ static void mark_fix(struct fix_ctx *ctx, struct apk_name *name)
 
 static void set_solver_flags(struct apk_database *db, const char *match, struct apk_name *name, void *pctx)
 {
-	struct fix_ctx *ctx = pctx;
+	struct fix_ctx *ctx = (struct fix_ctx *)pctx;
 
 	if (!name) {
 		apk_error("Package '%s' not found", match);

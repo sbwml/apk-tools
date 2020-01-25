@@ -62,7 +62,7 @@ void apk_solver_set_name_flags(struct apk_name *name,
 
 static int get_tag(struct apk_database *db, unsigned int pinning_mask, unsigned int repos)
 {
-	int i;
+	size_t i;
 
 	for (i = 0; i < db->num_repo_tags; i++) {
 		if (!(BIT(i) & pinning_mask))
@@ -733,10 +733,10 @@ static void record_change(struct apk_solver_state *ss, struct apk_package *opkg,
 	change = apk_change_array_add(&changeset->changes);
 	*change = (struct apk_change) {
 		.old_pkg = opkg,
-		.old_repository_tag = opkg ? opkg->ipkg->repository_tag : 0,
 		.new_pkg = npkg,
-		.new_repository_tag = npkg ? get_tag(ss->db, npkg->ss.pinning_allowed, get_pkg_repos(ss->db, npkg)) : 0,
-		.reinstall = npkg ? !!(npkg->ss.solver_flags & APK_SOLVERF_REINSTALL) : 0,
+		.old_repository_tag = (unsigned int)(opkg ? opkg->ipkg->repository_tag : 0),
+		.new_repository_tag = (unsigned int)(npkg ? get_tag(ss->db, npkg->ss.pinning_allowed, get_pkg_repos(ss->db, npkg)) : 0),
+		.reinstall = (unsigned int)(npkg ? !!(npkg->ss.solver_flags & APK_SOLVERF_REINSTALL) : 0),
 	};
 	if (npkg == NULL)
 		changeset->num_remove++;
@@ -874,7 +874,7 @@ static void cset_gen_name_change(struct apk_solver_state *ss, struct apk_name *n
 
 static void cset_gen_name_remove0(struct apk_package *pkg0, struct apk_dependency *dep0, struct apk_package *pkg, void *ctx)
 {
-	cset_gen_name_remove(ctx, pkg0);
+	cset_gen_name_remove((struct apk_solver_state*)ctx, pkg0);
 }
 
 static void cset_gen_name_remove(struct apk_solver_state *ss, struct apk_package *pkg)
@@ -976,7 +976,8 @@ static int free_package(apk_hash_item item, void *ctx)
 
 static int cmp_pkgname(const void *p1, const void *p2)
 {
-	const struct apk_dependency *d1 = p1, *d2 = p2;
+	const struct apk_dependency *d1 = (const struct apk_dependency*)p1, \
+		*d2 = (const struct apk_dependency*)p2;
 	return strcmp(d1->name->name, d2->name->name);
 }
 

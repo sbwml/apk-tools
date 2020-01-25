@@ -51,7 +51,7 @@ static ssize_t gzi_read(struct apk_istream *is, void *ptr, size_t size)
 	int r;
 
 	gis->zs.avail_out = size;
-	gis->zs.next_out  = ptr;
+	gis->zs.next_out  = (Bytef*)ptr;
 
 	while (gis->zs.avail_out != 0 && gis->is.err == 0) {
 		if (!APK_BLOB_IS_NULL(gis->cbarg)) {
@@ -63,15 +63,15 @@ static ssize_t gzi_read(struct apk_istream *is, void *ptr, size_t size)
 			apk_blob_t blob;
 
 			if (gis->cb != NULL && gis->cbprev != NULL &&
-			    gis->cbprev != gis->zs.next_in) {
+			    (Bytef*)gis->cbprev < gis->zs.next_in) {
 				gis->cb(gis->cbctx, APK_MPART_DATA,
 					APK_BLOB_PTR_LEN(gis->cbprev,
-					(void *)gis->zs.next_in - gis->cbprev));
+					gis->zs.next_in - (Bytef*)gis->cbprev));
 			}
 			blob = apk_istream_get_all(gis->zis);
 			gis->cbprev = blob.ptr;
 			gis->zs.avail_in = blob.len;
-			gis->zs.next_in = (void *) gis->cbprev;
+			gis->zs.next_in = (Bytef*) gis->cbprev;
 			if (blob.len < 0) {
 				gis->is.err = blob.len;
 				goto ret;
@@ -90,7 +90,7 @@ static ssize_t gzi_read(struct apk_istream *is, void *ptr, size_t size)
 			if (gis->zis->err && gis->zs.avail_in == 0)
 				gis->is.err = gis->zis->err;
 			if (gis->cb != NULL) {
-				gis->cbarg = APK_BLOB_PTR_LEN(gis->cbprev, (void *) gis->zs.next_in - gis->cbprev); 
+				gis->cbarg = APK_BLOB_PTR_LEN(gis->cbprev, gis->zs.next_in - (Bytef*)gis->cbprev); 
 				gis->cbprev = gis->zs.next_in;
 			}
 			/* If we hit end of the bitstream (not end
@@ -138,9 +138,9 @@ struct apk_istream *apk_istream_gunzip_mpart(struct apk_istream *is, apk_multipa
 {
 	struct apk_gzip_istream *gis;
 
-	if (IS_ERR_OR_NULL(is)) return ERR_CAST(is);
+	if (IS_ERR_OR_NULL(is)) return (struct apk_istream*)ERR_CAST(is);
 
-	gis = malloc(sizeof(*gis) + apk_io_bufsize);
+	gis = (struct apk_gzip_istream*)malloc(sizeof(*gis) + apk_io_bufsize);
 	if (!gis) goto err;
 
 	*gis = (struct apk_gzip_istream) {
@@ -160,7 +160,7 @@ struct apk_istream *apk_istream_gunzip_mpart(struct apk_istream *is, apk_multipa
 	return &gis->is;
 err:
 	apk_istream_close(is);
-	return ERR_PTR(-ENOMEM);
+	return (struct apk_istream*)ERR_PTR(-ENOMEM);
 }
 
 struct apk_gzip_ostream {
@@ -176,7 +176,7 @@ static ssize_t gzo_write(struct apk_ostream *os, const void *ptr, size_t size)
 	ssize_t have, r;
 
 	gos->zs.avail_in = size;
-	gos->zs.next_in = (void *) ptr;
+	gos->zs.next_in = (Bytef*) ptr;
 	while (gos->zs.avail_in) {
 		gos->zs.avail_out = sizeof(buffer);
 		gos->zs.next_out = buffer;
@@ -198,7 +198,7 @@ static int gzo_close(struct apk_ostream *os)
 {
 	struct apk_gzip_ostream *gos = container_of(os, struct apk_gzip_ostream, os);
 	unsigned char buffer[1024];
-	size_t have;
+	ssize_t have;
 	int r, rc = 0;
 
 	do {
@@ -228,9 +228,9 @@ struct apk_ostream *apk_ostream_gzip(struct apk_ostream *output)
 {
 	struct apk_gzip_ostream *gos;
 
-	if (IS_ERR_OR_NULL(output)) return ERR_CAST(output);
+	if (IS_ERR_OR_NULL(output)) return (struct apk_ostream*)ERR_CAST(output);
 
-	gos = malloc(sizeof(struct apk_gzip_ostream));
+	gos = (struct apk_gzip_ostream*)malloc(sizeof(struct apk_gzip_ostream));
 	if (gos == NULL) goto err;
 
 	*gos = (struct apk_gzip_ostream) {
@@ -247,6 +247,6 @@ struct apk_ostream *apk_ostream_gzip(struct apk_ostream *output)
 	return &gos->os;
 err:
 	apk_ostream_close(output);
-	return ERR_PTR(-ENOMEM);
+	return (struct apk_ostream*)ERR_PTR(-ENOMEM);
 }
 

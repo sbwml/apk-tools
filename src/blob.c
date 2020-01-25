@@ -32,7 +32,7 @@ char *apk_blob_cstr(apk_blob_t blob)
 	if (blob.ptr[blob.len-1] == 0)
 		return strdup(blob.ptr);
 
-	cstr = malloc(blob.len + 1);
+	cstr = (char*)malloc(blob.len + 1);
 	memcpy(cstr, blob.ptr, blob.len);
 	cstr[blob.len] = 0;
 
@@ -158,7 +158,7 @@ int apk_blob_rsplit(apk_blob_t blob, char split, apk_blob_t *l, apk_blob_t *r)
 {
 	char *sep;
 
-	sep = memrchr(blob.ptr, split, blob.len);
+	sep = (char*)memrchr(blob.ptr, split, blob.len);
 	if (sep == NULL)
 		return 0;
 
@@ -177,7 +177,7 @@ int apk_blob_split(apk_blob_t blob, apk_blob_t split, apk_blob_t *l, apk_blob_t 
 	if (!pos || end < pos) return 0;
 
 	while (1) {
-		pos = memchr(pos, split.ptr[0], end - pos);
+		pos = (char*)memchr(pos, split.ptr[0], end - pos);
 		if (!pos) return 0;
 
 		if (split.len > 1 && memcmp(pos, split.ptr, split.len) != 0) {
@@ -688,7 +688,7 @@ apk_blob_t *apk_blob_atomize(apk_blob_t blob)
 	if (atom != NULL)
 		return &atom->blob;
 
-	atom = malloc(sizeof(*atom));
+	atom = (struct apk_blob_atom*)malloc(sizeof(*atom));
 	atom->blob = blob;
 	apk_hash_insert_hashed(&atom_hash, atom, hash);
 
@@ -707,7 +707,7 @@ apk_blob_t *apk_blob_atomize_dup(apk_blob_t blob)
 	if (atom != NULL)
 		return &atom->blob;
 
-	atom = malloc(sizeof(*atom) + blob.len);
+	atom = (struct apk_blob_atom*)malloc(sizeof(*atom) + blob.len);
 	ptr = (char*) (atom + 1);
 	memcpy(ptr, blob.ptr, blob.len);
 	atom->blob = APK_BLOB_PTR_LEN(ptr, blob.len);

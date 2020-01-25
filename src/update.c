@@ -19,7 +19,7 @@
 static int update_main(void *ctx, struct apk_database *db, struct apk_string_array *args)
 {
 	struct apk_repository *repo;
-	int i;
+	size_t i;
 	char buf[32] = "OK:";
 
 	if (apk_verbosity < 1)

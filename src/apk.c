@@ -67,7 +67,7 @@ static void version(void)
 
 static struct apk_repository_list *apk_repository_new(const char *url)
 {
-	struct apk_repository_list *r = calloc(1, sizeof(struct apk_repository_list));
+	struct apk_repository_list *r = (struct apk_repository_list*)calloc(1, sizeof(struct apk_repository_list));
 	if (r) {
 		r->url = url;
 		list_init(&r->list);
@@ -540,7 +540,7 @@ int main(int argc, char **argv)
 #endif
 	apk_applet_register_builtin();
 
-	apk_argv = malloc(sizeof(char*[argc+2]));
+	apk_argv = (char**)malloc(sizeof(char*[argc+2]));
 	memcpy(apk_argv, argv, sizeof(char*[argc]));
 	apk_argv[argc] = NULL;
 	apk_argv[argc+1] = NULL;
@@ -556,7 +556,7 @@ int main(int argc, char **argv)
 
 	for (i = 0, num_options = 1; optgroups[i]; i++)
 		num_options += optgroups[i]->num_options;
-	all_options = alloca(sizeof(struct option) * num_options);
+	all_options = (struct option*)alloca(sizeof(struct option) * num_options);
 	for (i = r = 0; optgroups[i]; r += optgroups[i]->num_options, i++)
 		merge_options(&all_options[r], optgroups[i]->options, optgroups[i]->num_options);
 	if (applet != NULL) {

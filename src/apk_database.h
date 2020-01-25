@@ -187,11 +187,6 @@ struct apk_database {
 	} installed;
 };
 
-typedef union apk_database_or_void {
-	struct apk_database *db;
-	void *ptr;
-} apk_database_t __attribute__ ((__transparent_union__));
-
 struct apk_name *apk_db_get_name(struct apk_database *db, apk_blob_t name);
 struct apk_name *apk_db_query_name(struct apk_database *db, apk_blob_t name);
 int apk_db_get_tag_id(struct apk_database *db, apk_blob_t tag);
@@ -238,7 +233,7 @@ int apk_db_index_read(struct apk_database *db, struct apk_istream *is, int repo)
 int apk_db_index_read_file(struct apk_database *db, const char *file, int repo);
 int apk_db_index_write(struct apk_database *db, struct apk_ostream *os);
 
-int apk_db_add_repository(apk_database_t db, apk_blob_t repository);
+int apk_db_add_repository(void *db, apk_blob_t repository);
 struct apk_repository *apk_db_select_repo(struct apk_database *db,
 					  struct apk_package *pkg);
 

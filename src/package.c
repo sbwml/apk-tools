@@ -59,7 +59,7 @@ struct apk_package *apk_pkg_new(void)
 {
 	struct apk_package *pkg;
 
-	pkg = calloc(1, sizeof(struct apk_package));
+	pkg = (struct apk_package*)calloc(1, sizeof(struct apk_package));
 	if (pkg != NULL) {
 		apk_dependency_array_init(&pkg->depends);
 		apk_dependency_array_init(&pkg->install_if);
@@ -77,7 +77,7 @@ struct apk_installed_package *apk_pkg_install(struct apk_database *db,
 	if (pkg->ipkg != NULL)
 		return pkg->ipkg;
 
-	pkg->ipkg = ipkg = calloc(1, sizeof(struct apk_installed_package));
+	pkg->ipkg = ipkg = (struct apk_installed_package*)calloc(1, sizeof(struct apk_installed_package));
 	ipkg->pkg = pkg;
 	apk_string_array_init(&ipkg->triggers);
 	apk_string_array_init(&ipkg->pending_triggers);
@@ -262,10 +262,10 @@ void apk_blob_pull_dep(apk_blob_t *b, struct apk_database *db, struct apk_depend
 	*dep = (struct apk_dependency){
 		.name = name,
 		.version = apk_blob_atomize_dup(bver),
-		.repository_tag = tag,
-		.result_mask = mask,
-		.conflict = conflict,
-		.fuzzy = fuzzy,
+		.repository_tag = (unsigned int)tag,
+		.conflict = (unsigned int)conflict,
+		.result_mask = (unsigned int)mask,
+		.fuzzy = (unsigned int)fuzzy,
 	};
 	return;
 fail:
@@ -379,7 +379,7 @@ int apk_dep_analyze(struct apk_dependency *dep, struct apk_package *pkg)
 
 char *apk_dep_snprintf(char *buf, size_t n, struct apk_dependency *dep)
 {
-	apk_blob_t b = APK_BLOB_PTR_LEN(buf, n);
+	apk_blob_t b = APK_BLOB_PTR_LEN(buf, (ssize_t)n);
 	apk_blob_push_dep(&b, NULL, dep);
 	if (b.len)
 		apk_blob_push_blob(&b, APK_BLOB_PTR_LEN("", 1));
@@ -406,7 +406,7 @@ void apk_blob_push_dep(apk_blob_t *to, struct apk_database *db, struct apk_depen
 
 void apk_blob_push_deps(apk_blob_t *to, struct apk_database *db, struct apk_dependency_array *deps)
 {
-	int i;
+	size_t i;
 
 	if (deps == NULL)
 		return;
@@ -422,7 +422,8 @@ int apk_deps_write(struct apk_database *db, struct apk_dependency_array *deps, s
 {
 	apk_blob_t blob;
 	char tmp[256];
-	int i, n = 0;
+	size_t i;
+	int n = 0;
 
 	if (deps == NULL)
 		return 0;
@@ -456,7 +457,7 @@ const char *apk_script_types[] = {
 
 int apk_script_type(const char *name)
 {
-	int i;
+	size_t i;
 
 	for (i = 0; i < ARRAY_SIZE(apk_script_types); i++)
 		if (apk_script_types[i] &&
@@ -540,7 +541,8 @@ int apk_sign_ctx_process_file(struct apk_sign_ctx *ctx,
 	const EVP_MD *md = NULL;
 	const char *name = NULL;
 	BIO *bio;
-	int r, i, fd;
+	size_t i;
+	int r, fd;
 
 	if (ctx->data_started)
 		return 1;
@@ -870,7 +872,7 @@ static int read_info_line(void *ctx, apk_blob_t line)
 	};
 	struct read_info_ctx *ri = (struct read_info_ctx *) ctx;
 	apk_blob_t l, r;
-	int i;
+	size_t i;
 
 	if (line.ptr == NULL || line.len < 1 || line.ptr[0] == '#')
 		return 0;
@@ -981,13 +983,13 @@ int apk_ipkg_add_script(struct apk_installed_package *ipkg,
 			struct apk_istream *is,
 			unsigned int type, unsigned int size)
 {
-	void *ptr;
+	char *ptr;
 	int r;
 
 	if (type >= APK_SCRIPT_MAX)
 		return -1;
 
-	ptr = malloc(size);
+	ptr = (char*)malloc(size);
 	r = apk_istream_read(is, ptr, size);
 	if (r < 0) {
 		free(ptr);

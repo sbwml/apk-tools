@@ -56,7 +56,8 @@ static inline int IS_ERR_OR_NULL(const void *ptr) { return IS_ERR(ptr) || !ptr; 
 
 #ifndef container_of
 #define container_of(ptr, type, member) ({                      \
-        const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
+        const typeof( ((type *)0)->member ) *__mptr =           \
+          (const typeof( ((type *)0)->member )*)(ptr);          \
         (type *)( (char *)__mptr - offsetof(type,member) );})
 #endif
 
@@ -159,30 +160,30 @@ void *apk_array_resize(void *array, size_t new_size, size_t elem_size);
 	static inline void						\
 	array_type_name##_init(struct array_type_name **a)		\
 	{								\
-		*a = apk_array_resize(NULL, 0, 0);			\
+		*a = (struct array_type_name*)apk_array_resize(NULL, 0, 0);			\
 	}								\
 	static inline void						\
 	array_type_name##_free(struct array_type_name **a)		\
 	{								\
-		*a = apk_array_resize(*a, 0, 0);			\
+		*a = (struct array_type_name*)apk_array_resize(*a, 0, 0);			\
 	}								\
 	static inline void						\
 	array_type_name##_resize(struct array_type_name **a, size_t size)\
 	{								\
-		*a = apk_array_resize(*a, size, sizeof(elem_type_name));\
+		*a = (struct array_type_name*)apk_array_resize(*a, size, sizeof(elem_type_name));\
 	}								\
 	static inline void						\
 	array_type_name##_copy(struct array_type_name **a, struct array_type_name *b)\
 	{								\
 		if (*a == b) return;					\
-		*a = apk_array_resize(*a, b->num, sizeof(elem_type_name));\
+		*a = (struct array_type_name*)apk_array_resize(*a, b->num, sizeof(elem_type_name));\
 		memcpy((*a)->item, b->item, b->num * sizeof(elem_type_name));\
 	}								\
 	static inline elem_type_name *					\
 	array_type_name##_add(struct array_type_name **a)		\
 	{								\
 		int size = 1 + (*a)->num;				\
-		*a = apk_array_resize(*a, size, sizeof(elem_type_name));\
+		*a = (struct array_type_name*)apk_array_resize(*a, size, sizeof(elem_type_name));\
 		return &(*a)->item[size-1];				\
 	}
 
@@ -234,13 +235,13 @@ static inline void hlist_add_head(struct hlist_node *n, struct hlist_head *h)
 {
 	struct hlist_node *first = h->first;
 
-	n->next = first ? first : LIST_END;
+	n->next = first ? first : (struct hlist_node*)LIST_END;
 	h->first = n;
 }
 
 static inline void hlist_add_after(struct hlist_node *n, struct hlist_node **prev)
 {
-	n->next = *prev ? *prev : LIST_END;
+	n->next = *prev ? *prev : (struct hlist_node*)LIST_END;
 	*prev = n;
 }
 
@@ -317,8 +318,8 @@ static inline void __list_del(struct list_head *prev, struct list_head *next)
 static inline void list_del(struct list_head *entry)
 {
 	__list_del(entry->prev, entry->next);
-	entry->next = LIST_POISON1;
-	entry->prev = LIST_POISON2;
+	entry->next = (struct list_head*)LIST_POISON1;
+	entry->prev = (struct list_head*)LIST_POISON2;
 }
 
 static inline void list_del_init(struct list_head *entry)

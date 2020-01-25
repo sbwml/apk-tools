@@ -21,7 +21,7 @@ static void print_policy(struct apk_database *db, const char *match, struct apk_
 {
 	struct apk_provider *p;
 	struct apk_repository *repo;
-	int i, j, num = 0;
+	size_t i, j, num = 0;
 
 	if (!name) return;
 

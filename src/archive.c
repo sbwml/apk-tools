@@ -56,7 +56,7 @@ struct tar_header {
 
 static unsigned int get_octal(char *s, size_t l)
 {
-	apk_blob_t b = APK_BLOB_PTR_LEN(s, l);
+	apk_blob_t b = APK_BLOB_PTR_LEN(s, (ssize_t)l);
 	return apk_blob_pull_uint(&b, 8);
 }
 
@@ -76,8 +76,8 @@ static void put_octal(char *s, size_t l, size_t value)
 static int blob_realloc(apk_blob_t *b, size_t newsize)
 {
 	char *tmp;
-	if (b->len >= newsize) return 0;
-	tmp = realloc(b->ptr, newsize);
+	if (b->len >= (ssize_t)newsize) return 0;
+	tmp = (char*)realloc(b->ptr, newsize);
 	if (!tmp) return -ENOMEM;
 	b->ptr = tmp;
 	b->len = newsize;
@@ -134,7 +134,7 @@ int apk_tar_parse(struct apk_istream *is, apk_archive_entry_parser parser,
 	struct apk_segment_istream segment;
 	struct tar_header buf;
 	int end = 0, r;
-	size_t toskip, paxlen = 0;
+	ssize_t toskip, paxlen = 0;
 	apk_blob_t pax = APK_BLOB_NULL, longname = APK_BLOB_NULL;
 	char filename[sizeof buf.name + sizeof buf.prefix + 2];
 
@@ -299,7 +299,7 @@ int apk_tar_write_entry(struct apk_ostream *os, const struct apk_file_info *ae,
 		strcpy(buf.magic, "ustar  ");
 		memset(buf.chksum, ' ', sizeof(buf.chksum));
 		src = (const unsigned char *) &buf;
-		for (i = chksum = 0; i < sizeof(buf); i++)
+		for (i = chksum = 0; i < (ssize_t)sizeof(buf); i++)
 			chksum += src[i];
 	        put_octal(buf.chksum, sizeof(buf.chksum)-1, chksum);
 	}

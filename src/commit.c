@@ -227,7 +227,7 @@ struct apk_commit_hook {
 
 static int run_commit_hook(void *ctx, int dirfd, const char *file)
 {
-	static char *const commit_hook_str[] = { "pre-commit", "post-commit" };
+	static const char *const commit_hook_str[] = { "pre-commit", "post-commit" };
 	struct apk_commit_hook *hook = (struct apk_commit_hook *) ctx;
 	struct apk_database *db = hook->db;
 	char fn[PATH_MAX], *argv[] = { fn, (char *) commit_hook_str[hook->type], NULL };
@@ -427,7 +427,7 @@ static void print_pinning_errors(struct print_state *ps, struct apk_package *pkg
 	} else {
 		if (pkg->repos & apk_db_get_pinning_mask_repos(db, APK_DEFAULT_PINNING_MASK | BIT(tag)))
 			return;
-		for (i = 0; i < db->num_repo_tags; i++) {
+		for (i = 0; i < (int)db->num_repo_tags; i++) {
 			if (pkg->repos & db->repo_tags[i].allowed_repos) {
 				label_start(ps, "masked in:");
 				apk_print_indented(&ps->i, db->repo_tags[i].tag);
@@ -530,7 +530,7 @@ static void analyze_name(struct print_state *ps, struct apk_name *name)
 		foreach_array_item(p0, name->providers) {
 			name0 = p0->pkg->name;
 			refs = (name0->state_int & STATE_COUNT_MASK);
-			if (refs == name0->providers->num) {
+			if (refs == (int)name0->providers->num) {
 				/* name only */
 				apk_print_indented(&ps->i, APK_BLOB_STR(name0->name));
 				name0->state_int &= ~STATE_COUNT_MASK;

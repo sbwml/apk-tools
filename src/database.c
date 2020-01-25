@@ -52,7 +52,7 @@ enum {
 int apk_verbosity = 1;
 unsigned int apk_flags = 0, apk_force = 0;
 
-static apk_blob_t tmpprefix = { .len=8, .ptr = ".apknew." };
+static apk_blob_t tmpprefix = APK_BLOB_PTR_LEN(".apknew.", 8);
 
 static const char * const apkindex_tar_gz = "APKINDEX.tar.gz";
 
@@ -212,7 +212,7 @@ struct apk_name *apk_db_get_name(struct apk_database *db, apk_blob_t name)
 	if (pn != NULL)
 		return pn;
 
-	pn = calloc(1, sizeof(struct apk_name));
+	pn = (struct apk_name*)calloc(1, sizeof(struct apk_name));
 	if (pn == NULL)
 		return NULL;
 
@@ -303,7 +303,7 @@ struct apk_db_dir *apk_db_dir_get(struct apk_database *db, apk_blob_t name)
 	dir = (struct apk_db_dir *) apk_hash_get_hashed(&db->installed.dirs, name, hash);
 	if (dir != NULL && dir->refs) return apk_db_dir_ref(dir);
 	if (dir == NULL) {
-		dir = calloc(1, sizeof(*dir) + name.len + 1);
+		dir = (struct apk_db_dir*)calloc(1, sizeof(*dir) + name.len + 1);
 		dir->rooted_name[0] = '/';
 		memcpy(dir->name, name.ptr, name.len);
 		dir->name[name.len] = 0;
@@ -369,7 +369,7 @@ static struct apk_db_dir_instance *apk_db_diri_new(struct apk_database *db,
 {
 	struct apk_db_dir_instance *diri;
 
-	diri = calloc(1, sizeof(struct apk_db_dir_instance));
+	diri = (struct apk_db_dir_instance*)calloc(1, sizeof(struct apk_db_dir_instance));
 	if (diri != NULL) {
 		hlist_add_after(&diri->pkg_dirs_list, *after);
 		*after = &diri->pkg_dirs_list.next;
@@ -438,7 +438,7 @@ static struct apk_db_file *apk_db_file_new(struct apk_db_dir_instance *diri,
 {
 	struct apk_db_file *file;
 
-	file = malloc(sizeof(*file) + name.len + 1);
+	file = (struct apk_db_file*)malloc(sizeof(*file) + name.len + 1);
 	if (file == NULL)
 		return NULL;
 
@@ -526,7 +526,7 @@ struct apk_package *apk_db_pkg_add(struct apk_database *db, struct apk_package *
 	if (pkg->filename != NULL || pkg->installed_size == 0)
 		pkg->repos |= BIT(APK_REPOSITORY_CACHED);
 
-	idb = apk_hash_get(&db->available.packages, APK_BLOB_CSUM(pkg->csum));
+	idb = container_of(apk_hash_get(&db->available.packages, APK_BLOB_CSUM(pkg->csum)), struct apk_package, hash_node);
 	if (idb == NULL) {
 		idb = pkg;
 		apk_hash_insert(&db->available.packages, pkg);
@@ -596,7 +596,7 @@ int apk_repo_format_real_url(struct apk_database *db, struct apk_repository *rep
 		r = snprintf(buf, len, "%s%s" BLOB_FMT "/%s",
 			     repo->url, repo->url[strlen(repo->url)-1] == '/' ? "" : "/",
 			     BLOB_PRINTF(arch), apkindex_tar_gz);
-	if (r >= len)
+	if ((size_t)r >= len)
 		return -ENOBUFS;
 	return 0;
 }
@@ -606,7 +606,7 @@ int apk_repo_format_item(struct apk_database *db, struct apk_repository *repo, s
 {
 	if (repo->url == db->repos[APK_REPOSITORY_CACHED].url) {
 		*fd = db->cache_fd;
-		return apk_pkg_format_cache_pkg(APK_BLOB_PTR_LEN(buf, len), pkg);
+		return apk_pkg_format_cache_pkg(APK_BLOB_PTR_LEN(buf, (ssize_t)len), pkg);
 	} else {
 		*fd = AT_FDCWD;
 		return apk_repo_format_real_url(db, repo, pkg, buf, len);
@@ -872,7 +872,7 @@ int apk_db_index_read(struct apk_database *db, struct apk_istream *is, int repo)
 			ipkg->repository_tag = apk_db_get_tag_id(db, l);
 			break;
 		case 'f':
-			for (r = 0; r < l.len; r++) {
+			for (r = 0; r < (int)l.len; r++) {
 				switch (l.ptr[r]) {
 				case 'f': ipkg->broken_files = 1; break;
 				case 's': ipkg->broken_script = 1; break;
@@ -1019,7 +1019,7 @@ static int apk_db_scriptdb_write(struct apk_database *db, struct apk_ostream *os
 
 			fi = (struct apk_file_info) {
 				.name = filename,
-				.size = ipkg->script[i].len,
+				.size = (off_t)ipkg->script[i].len,
 				.mode = 0755 | S_IFREG,
 				.mtime = now,
 			};
@@ -1060,10 +1060,10 @@ static int apk_read_script_archive_entry(void *ctx,
 
 	/* The scripts db expects file names in format:
 	 * pkgname-version.<hexdump of package checksum>.action */
-	fnaction = memrchr(ae->name, '.', strlen(ae->name));
+	fnaction = (char*)memrchr(ae->name, '.', strlen(ae->name));
 	if (fnaction == NULL || fnaction == ae->name)
 		return 0;
-	fncsum = memrchr(ae->name, '.', fnaction - ae->name - 1);
+	fncsum = (char*)memrchr(ae->name, '.', fnaction - ae->name - 1);
 	if (fncsum == NULL)
 		return 0;
 	fnaction++;
@@ -1086,7 +1086,7 @@ static int apk_read_script_archive_entry(void *ctx,
 
 static int parse_triggers(void *ctx, apk_blob_t blob)
 {
-	struct apk_installed_package *ipkg = ctx;
+	struct apk_installed_package *ipkg = (struct apk_installed_package*)ctx;
 
 	if (blob.len == 0)
 		return 0;
@@ -1251,7 +1251,7 @@ int apk_db_index_write(struct apk_database *db, struct apk_ostream *os)
 static int add_protected_path(void *ctx, apk_blob_t blob)
 {
 	struct apk_database *db = (struct apk_database *) ctx;
-	int protect_mode = APK_PROTECT_NONE;
+	unsigned int protect_mode = APK_PROTECT_NONE;
 
 	/* skip empty lines and comments */
 	if (blob.len == 0)
@@ -1428,7 +1428,7 @@ static void apk_db_setup_repositories(struct apk_database *db, const char *cache
 
 static int apk_db_name_rdepends(apk_hash_item item, void *pctx)
 {
-	struct apk_name *name = item, *rname, **n0;
+	struct apk_name *name = (struct apk_name*)item, *rname, **n0;
 	struct apk_provider *p;
 	struct apk_dependency *dep;
 	struct apk_name_array *touched;
@@ -1783,7 +1783,7 @@ void apk_db_close(struct apk_database *db)
 	struct apk_db_dir_instance *diri;
 	struct apk_protected_path *ppath;
 	struct hlist_node *dc, *dn;
-	int i;
+	unsigned int i;
 
 	/* the id cache was never initialized if root_fd failed */
 	if (db->root_fd >= 0)
@@ -1839,7 +1839,7 @@ void apk_db_close(struct apk_database *db)
 
 int apk_db_get_tag_id(struct apk_database *db, apk_blob_t tag)
 {
-	int i;
+	unsigned int i;
 
 	if (APK_BLOB_IS_NULL(tag))
 		return APK_DEFAULT_REPOSITORY_TAG;
@@ -1861,7 +1861,7 @@ int apk_db_get_tag_id(struct apk_database *db, apk_blob_t tag)
 	if (tag.ptr[0] == '@') {
 		db->repo_tags[i].tag = *apk_blob_atomize_dup(tag);
 	} else {
-		char *tmp = alloca(tag.len + 1);
+		char *tmp = (char*)alloca(tag.len + 1);
 		tmp[0] = '@';
 		memcpy(&tmp[1], tag.ptr, tag.len);
 		db->repo_tags[i].tag = *apk_blob_atomize_dup(APK_BLOB_PTR_LEN(tmp, tag.len+1));
@@ -1878,7 +1878,7 @@ static int fire_triggers(apk_hash_item item, void *ctx)
 	struct apk_database *db = (struct apk_database *) ctx;
 	struct apk_db_dir *dbd = (struct apk_db_dir *) item;
 	struct apk_installed_package *ipkg;
-	int i;
+	unsigned int i;
 
 	list_for_each_entry(ipkg, &db->installed.triggers, trigger_pkgs_list) {
 		if (!ipkg->run_all_triggers && !dbd->modified)
@@ -1917,7 +1917,7 @@ int apk_db_run_script(struct apk_database *db, char *fn, char **argv)
 {
 	int status;
 	pid_t pid;
-	static char * const environment[] = {
+	static const char * const environment[] = {
 		"PATH=/usr/sbin:/usr/bin:/sbin:/bin",
 		NULL
 	};
@@ -1930,7 +1930,7 @@ int apk_db_run_script(struct apk_database *db, char *fn, char **argv)
 	if (pid == 0) {
 		umask(0022);
 		if (fchdir(db->root_fd) == 0 && chroot(".") == 0)
-			execve(fn, argv, environment);
+			execve(fn, argv, (char* const*)environment);
 		exit(127); /* should not get here */
 	}
 	waitpid(pid, &status, 0);
@@ -2063,7 +2063,7 @@ int apk_db_check_world(struct apk_database *db, struct apk_dependency_array *wor
 struct apk_package *apk_db_get_pkg(struct apk_database *db,
 				   struct apk_checksum *csum)
 {
-	return apk_hash_get(&db->available.packages, APK_BLOB_CSUM(*csum));
+	return (struct apk_package*)apk_hash_get(&db->available.packages, APK_BLOB_CSUM(*csum));
 }
 
 struct apk_package *apk_db_get_file_owner(struct apk_database *db,
@@ -2091,7 +2091,7 @@ struct apk_package *apk_db_get_file_owner(struct apk_database *db,
 unsigned int apk_db_get_pinning_mask_repos(struct apk_database *db, unsigned short pinning_mask)
 {
 	unsigned int repository_mask = 0;
-	int i;
+	unsigned int i;
 
 	for (i = 0; i < db->num_repo_tags && pinning_mask; i++) {
 		if (!(BIT(i) & pinning_mask))
@@ -2204,12 +2204,13 @@ int apk_db_index_read_file(struct apk_database *db, const char *file, int repo)
 	return load_index(db, apk_istream_from_file(AT_FDCWD, file), targz, repo);
 }
 
-int apk_db_add_repository(apk_database_t _db, apk_blob_t _repository)
+int apk_db_add_repository(void *_db, apk_blob_t _repository)
 {
-	struct apk_database *db = _db.db;
+	struct apk_database *db = (struct apk_database *)_db;
 	struct apk_repository *repo;
 	apk_blob_t brepo, btag;
-	int repo_num, r, targz = 1, tag_id = 0;
+	unsigned int repo_num;
+	int r, targz = 1, tag_id = 0;
 	char buf[PATH_MAX], *url;
 
 	brepo = _repository;

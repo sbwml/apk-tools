@@ -142,7 +142,7 @@ void apk_print_indented_fmt(struct apk_indent *i, const char *fmt, ...)
 
 	va_start(va, fmt);
 	n = vsnprintf(tmp, sizeof(tmp), fmt, va);
-	apk_print_indented(i, APK_BLOB_PTR_LEN(tmp, n));
+	apk_print_indented(i, APK_BLOB_PTR_LEN(tmp, (ssize_t)n));
 	va_end(va);
 }
 

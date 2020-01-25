@@ -36,7 +36,7 @@ int apk_hash_foreach(struct apk_hash *h, apk_hash_enumerator_f e, void *ctx)
 
 	foreach_array_item(bucket, h->buckets) {
 		hlist_for_each_safe(pos, n, bucket) {
-			r = e(((void *) pos) - offset, ctx);
+			r = e(((char *) pos) - offset, ctx);
 			if (r != 0 && ctx != NULL)
 				return r;
 		}
@@ -55,13 +55,13 @@ apk_hash_item apk_hash_get_hashed(struct apk_hash *h, apk_blob_t key, unsigned l
 	hash %= h->buckets->num;
 	if (h->ops->compare_item != NULL) {
 		hlist_for_each(pos, &h->buckets->item[hash]) {
-			item = ((void *) pos) - offset;
+			item = ((char *) pos) - offset;
 			if (h->ops->compare_item(item, key) == 0)
 				return item;
 		}
 	} else {
 		hlist_for_each(pos, &h->buckets->item[hash]) {
-			item = ((void *) pos) - offset;
+			item = ((char *) pos) - offset;
 			itemkey = h->ops->get_key(item);
 			if (h->ops->compare(key, itemkey) == 0)
 				return item;
@@ -76,7 +76,7 @@ void apk_hash_insert_hashed(struct apk_hash *h, apk_hash_item item, unsigned lon
 	apk_hash_node *node;
 
 	hash %= h->buckets->num;
-	node = (apk_hash_node *) (item + h->ops->node_offset);
+	node = (apk_hash_node *) ((char*)item + h->ops->node_offset);
 	hlist_add_head(node, &h->buckets->item[hash]);
 	h->num_items++;
 }
@@ -91,7 +91,7 @@ void apk_hash_delete_hashed(struct apk_hash *h, apk_blob_t key, unsigned long ha
 	hash %= h->buckets->num;
 	if (h->ops->compare_item != NULL) {
 		hlist_for_each(pos, &h->buckets->item[hash]) {
-			item = ((void *) pos) - offset;
+			item = ((char *) pos) - offset;
 			if (h->ops->compare_item(item, key) == 0) {
 				hlist_del(pos, &h->buckets->item[hash]);
 				h->ops->delete_item(item);
@@ -100,7 +100,7 @@ void apk_hash_delete_hashed(struct apk_hash *h, apk_blob_t key, unsigned long ha
 		}
 	} else {
 		hlist_for_each(pos, &h->buckets->item[hash]) {
-			item = ((void *) pos) - offset;
+			item = ((char *) pos) - offset;
 			itemkey = h->ops->get_key(item);
 			if (h->ops->compare(key, itemkey) == 0) {
 				hlist_del(pos, &h->buckets->item[hash]);

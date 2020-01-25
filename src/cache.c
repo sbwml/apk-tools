@@ -117,7 +117,7 @@ static void cache_clean_item(struct apk_database *db, int dirfd, const char *nam
 {
 	char tmp[PATH_MAX];
 	apk_blob_t b;
-	int i;
+	size_t i;
 
 	if (strcmp(name, "installed") == 0) return;
 

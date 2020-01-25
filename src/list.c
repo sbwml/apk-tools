@@ -171,7 +171,7 @@ static void iterate_providers(const struct apk_name *name, const struct list_ctx
 
 static void print_result(struct apk_database *db, const char *match, struct apk_name *name, void *pctx)
 {
-	struct list_ctx *ctx = pctx;
+	struct list_ctx *ctx = (struct list_ctx*)pctx;
 
 	if (name == NULL)
 		return;
@@ -189,7 +189,7 @@ static void print_result(struct apk_database *db, const char *match, struct apk_
 
 static int option_parse_applet(void *pctx, struct apk_db_options *dbopts, int optch, const char *optarg)
 {
-	struct list_ctx *ctx = pctx;
+	struct list_ctx *ctx = (struct list_ctx*)pctx;
 
 	switch (optch)
 	{
@@ -245,7 +245,7 @@ static const struct apk_option_group optgroup_applet = {
 
 static int list_main(void *pctx, struct apk_database *db, struct apk_string_array *args)
 {
-	struct list_ctx *ctx = pctx;
+	struct list_ctx *ctx = (struct list_ctx*)pctx;
 
 	ctx->filters = args;
 

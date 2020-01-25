@@ -65,7 +65,7 @@ static int cup(void)
 	unsigned long len = sizeof(buf);
 
 	uncompress(buf, &len, z, sizeof(z));
-	return write(STDOUT_FILENO, buf, len) != len;
+	return write(STDOUT_FILENO, buf, len) != (ssize_t)len;
 }
 
 static int option_parse_applet(void *ctx, struct apk_db_options *dbopts, int optch, const char *optarg)
@@ -134,14 +134,14 @@ static int fetch_package(apk_hash_item item, void *pctx)
 		goto err;
 	}
 
-	if (snprintf(filename, sizeof(filename), PKG_FILE_FMT, PKG_FILE_PRINTF(pkg)) >= sizeof(filename)) {
+	if (snprintf(filename, sizeof(filename), PKG_FILE_FMT, PKG_FILE_PRINTF(pkg)) >= (ssize_t)sizeof(filename)) {
 		r = -ENOBUFS;
 		goto err;
 	}
 
 	if (!(ctx->flags & FETCH_STDOUT)) {
 		if (apk_fileinfo_get(ctx->outdir_fd, filename, APK_CHECKSUM_NONE, &fi) == 0 &&
-		    fi.size == pkg->size)
+		    fi.size == (off_t)pkg->size)
 			return 0;
 	}
 
@@ -185,7 +185,7 @@ static int fetch_package(apk_hash_item item, void *pctx)
 	}
 	apk_istream_close(is);
 
-	if (r != pkg->size) {
+	if (r != (ssize_t)pkg->size) {
 		unlinkat(ctx->outdir_fd, filename, 0);
 		if (r >= 0) r = -EIO;
 		goto err;
@@ -253,8 +253,9 @@ static void mark_names_recursive(struct apk_database *db, struct apk_string_arra
 	apk_change_array_free(&changeset.changes);
 }
 
-static void mark_name(struct apk_database *db, const char *match, struct apk_name *name, void *ctx)
+static void mark_name(struct apk_database *db, const char *match, struct apk_name *name, void *_ctx)
 {
+	struct fetch_ctx* ctx = (struct fetch_ctx*)_ctx;
 	struct apk_package *pkg = NULL;
 	struct apk_provider *p;
 
@@ -290,7 +291,7 @@ static int purge_package(void *pctx, int dirfd, const char *filename)
 		if (p0->pkg->name != name) continue;
 		l = snprintf(tmp, sizeof tmp, PKG_FILE_FMT, PKG_FILE_PRINTF(p0->pkg));
 		if (l > sizeof tmp) continue;
-		if (apk_blob_compare(b, APK_BLOB_PTR_LEN(tmp, l)) != 0) continue;
+		if (apk_blob_compare(b, APK_BLOB_PTR_LEN(tmp, (ssize_t)l)) != 0) continue;
 		if (p0->pkg->marked) return 0;
 		break;
 	}

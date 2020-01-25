@@ -245,8 +245,8 @@ static void info_print_install_if(struct apk_database *db, struct apk_package *p
 
 static void info_print_rinstall_if(struct apk_database *db, struct apk_package *pkg)
 {
-	int i, j;
-	char *separator = apk_verbosity > 1 ? " " : "\n";
+	size_t i, j;
+	char *separator = (char*)(apk_verbosity > 1 ? " " : "\n");
 
 	if (apk_verbosity == 1)
 		printf(PKG_VER_FMT " affects auto-installation of:\n",
@@ -338,7 +338,7 @@ static void info_subaction(struct info_ctx *ctx, struct apk_package *pkg)
 	const int requireipkg =
 		APK_INFO_CONTENTS | APK_INFO_TRIGGERS | APK_INFO_RDEPENDS |
 		APK_INFO_RINSTALL_IF | APK_INFO_REPLACES;
-	int i;
+	size_t i;
 
 	for (i = 0; i < ARRAY_SIZE(subactions); i++) {
 		if (!(BIT(i) & ctx->subaction_mask))

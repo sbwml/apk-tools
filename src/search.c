@@ -150,7 +150,7 @@ match:
 
 static void print_result(struct apk_database *db, const char *match, struct apk_name *name, void *pctx)
 {
-	struct search_ctx *ctx = pctx;
+	struct search_ctx *ctx = (struct search_ctx*)pctx;
 	struct apk_provider *p;
 	struct apk_package *pkg = NULL;
 
@@ -193,7 +193,7 @@ static int search_main(void *pctx, struct apk_database *db, struct apk_string_ar
 
 	if (!ctx->search_exact) {
 		foreach_array_item(pmatch, ctx->filter) {
-			tmp = alloca(strlen(*pmatch) + 3);
+			tmp = (char*)alloca(strlen(*pmatch) + 3);
 			sprintf(tmp, "*%s*", *pmatch);
 			*pmatch = tmp;
 		}

@@ -129,7 +129,7 @@ int apk_do_self_upgrade(struct apk_database *db, unsigned short solver_flags, un
 	apk_message("Continuing the upgrade transaction with new apk-tools:");
 	for (r = 0; apk_argv[r] != NULL; r++)
 		;
-	apk_argv[r] = "--no-self-upgrade";
+	apk_argv[r] = (char*)"--no-self-upgrade";
 	execvp(apk_argv[0], apk_argv);
 
 	apk_error("PANIC! Failed to re-execute new apk-tools!");

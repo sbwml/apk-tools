@@ -25,7 +25,7 @@ struct ver_ctx {
 static int ver_indexes(struct apk_database *db, struct apk_string_array *args)
 {
 	struct apk_repository *repo;
-	int i;
+	size_t i;
 
 	for (i = 0; i < db->num_repos; i++) {
 		repo = &db->repos[i];
@@ -120,7 +120,8 @@ static void ver_print_package_status(struct apk_database *db, const char *match,
 	const char *opstr;
 	apk_blob_t *latest = apk_blob_atomize(APK_BLOB_STR(""));
 	unsigned int latest_repos = 0;
-	int i, r = -1;
+	size_t i;
+	int r = -1;
 	unsigned short tag, allowed_repos;
 
 	if (!name) return;

@@ -36,7 +36,7 @@ void *apk_array_resize(void *array, size_t new_size, size_t elem_size)
 
 	tmp = realloc(array, sizeof(size_t) + new_size * elem_size);
 	if (diff > 0)
-		memset(tmp + sizeof(size_t) + old_size * elem_size, 0,
+		memset((char*)tmp + sizeof(size_t) + old_size * elem_size, 0,
 		       diff * elem_size);
 	*((size_t*) tmp) = new_size;
 

@@ -61,7 +61,7 @@ static void process_package(struct apk_database *db, struct apk_package *pkg)
 static int read_file_entry(void *ctx, const struct apk_file_info *ae,
                            struct apk_istream *is)
 {
-	struct manifest_file_ctx *mctx = ctx;
+	struct manifest_file_ctx *mctx = (struct manifest_file_ctx*)ctx;
 	char csum_buf[APK_BLOB_CHECKSUM_BUF];
 	apk_blob_t csum_blob = APK_BLOB_BUF(csum_buf);
 	int r;

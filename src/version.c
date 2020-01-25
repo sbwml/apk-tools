@@ -103,23 +103,23 @@ static int get_token(int *type, apk_blob_t *blob)
 		v = blob->ptr[i++];
 		break;
 	case TOKEN_SUFFIX:
-		for (v = 0; v < ARRAY_SIZE(pre_suffixes); v++) {
+		for (v = 0; v < (ssize_t)ARRAY_SIZE(pre_suffixes); v++) {
 			i = strlen(pre_suffixes[v]);
 			if (i <= blob->len &&
 			    strncmp(pre_suffixes[v], blob->ptr, i) == 0)
 				break;
 		}
-		if (v < ARRAY_SIZE(pre_suffixes)) {
+		if (v < (ssize_t)ARRAY_SIZE(pre_suffixes)) {
 			v = v - ARRAY_SIZE(pre_suffixes);
 			break;
 		}
-		for (v = 0; v < ARRAY_SIZE(post_suffixes); v++) {
+		for (v = 0; v < (ssize_t)ARRAY_SIZE(post_suffixes); v++) {
 			i = strlen(post_suffixes[v]);
 			if (i <= blob->len &&
 			    strncmp(post_suffixes[v], blob->ptr, i) == 0)
 				break;
 		}
-		if (v < ARRAY_SIZE(post_suffixes))
+		if (v < (ssize_t)ARRAY_SIZE(post_suffixes))
 			break;
 		/* fallthrough: invalid suffix */
 	default:

@@ -63,7 +63,7 @@ static int fetch_maperror(int ec)
 		[FETCH_UNCHANGED] = -EALREADY,
 	};
 
-	if (ec < 0 || ec >= ARRAY_SIZE(map) || !map[ec]) return -EIO;
+	if (ec < 0 || (size_t)ec >= ARRAY_SIZE(map) || !map[ec]) return -EIO;
 	return map[ec];
 }
 
@@ -113,7 +113,7 @@ static struct apk_istream *apk_istream_fetch(const char *url, time_t since)
 		rc = -EAPKBADURL;
 		goto err;
 	}
-	fis = malloc(sizeof *fis + apk_io_bufsize);
+	fis = (struct apk_fetch_istream*)malloc(sizeof *fis + apk_io_bufsize);
 	if (!fis) {
 		rc = -ENOMEM;
 		goto err;
@@ -140,7 +140,7 @@ err:
 	if (u) fetchFreeURL(u);
 	if (io) fetchIO_close(io);
 	if (fis) free(fis);
-	return ERR_PTR(rc);
+	return (struct apk_istream*)ERR_PTR(rc);
 }
 
 struct apk_istream *apk_istream_from_fd_url_if_modified(int atfd, const char *url, time_t since)

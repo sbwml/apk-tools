@@ -173,7 +173,7 @@ static int Papk_db_open(lua_State *L)
 	else
 		opts.open_flags |= APK_OPENF_READ;
 
-	db = lua_newuserdata(L, sizeof(struct apk_database));
+	db = (struct apk_database*)lua_newuserdata(L, sizeof(struct apk_database));
 	luaL_getmetatable(L, APK_DB_META);
 	lua_setmetatable(L, -2);
 

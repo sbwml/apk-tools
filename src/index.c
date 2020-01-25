@@ -173,7 +173,7 @@ static int index_main(void *ctx, struct apk_database *db, struct apk_string_arra
 					continue;
 				if (apk_blob_compare(bver, *pkg->version) != 0)
 					continue;
-				if (pkg->size != fi.size)
+				if ((off_t)pkg->size != fi.size)
 					continue;
 				pkg->filename = strdup(*parg);
 				if (ictx->rewrite_arch != NULL)
@@ -212,7 +212,7 @@ static int index_main(void *ctx, struct apk_database *db, struct apk_string_arra
 
 		memset(&fi, 0, sizeof(fi));
 		fi.mode = 0644 | S_IFREG;
-		fi.name = "APKINDEX";
+		fi.name = (char*)"APKINDEX";
 		counter = apk_ostream_counter(&fi.size);
 		r = apk_db_index_write(db, counter);
 		apk_ostream_close(counter);
@@ -223,7 +223,7 @@ static int index_main(void *ctx, struct apk_database *db, struct apk_string_arra
 				struct apk_file_info fi_desc;
 				memset(&fi_desc, 0, sizeof(fi));
 				fi_desc.mode = 0644 | S_IFREG;
-				fi_desc.name = "DESCRIPTION";
+				fi_desc.name = (char*)"DESCRIPTION";
 				fi_desc.size = strlen(ictx->description);
 				apk_tar_write_entry(os, &fi_desc, ictx->description);
 			}
