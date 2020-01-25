@@ -582,7 +582,7 @@ static unsigned char b64decode[] = {
 };
 
 static inline __attribute__((always_inline))
-int pull_b64_chunk(unsigned char *restrict to, const unsigned char *restrict from, int len)
+int pull_b64_chunk(unsigned char *__restrict__ to, const unsigned char *__restrict__ from, int len)
 {
 	unsigned char tmp[4];
 	int i, r = 0;
@@ -609,8 +609,8 @@ int pull_b64_chunk(unsigned char *restrict to, const unsigned char *restrict fro
 void apk_blob_pull_base64(apk_blob_t *b, apk_blob_t to)
 {
 	unsigned char tmp[4];
-	unsigned char *restrict src = (unsigned char *) b->ptr;
-	unsigned char *restrict dst = (unsigned char *) to.ptr;
+	unsigned char *__restrict__ src = (unsigned char *) b->ptr;
+	unsigned char *__restrict__ dst = (unsigned char *) to.ptr;
 	unsigned char *dend;
 	int r, needed;
 
