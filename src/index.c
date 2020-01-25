@@ -70,8 +70,8 @@ static const struct apk_option options_applet[] = {
 
 static const struct apk_option_group optgroup_applet = {
 	.name = "Index",
-	.options = options_applet,
 	.num_options = ARRAY_SIZE(options_applet),
+	.options = options_applet,
 	.parse = option_parse_applet,
 };
 
@@ -259,12 +259,12 @@ static int index_main(void *ctx, struct apk_database *db, struct apk_string_arra
 
 static struct apk_applet apk_index = {
 	.name = "index",
-	.help = "Create repository index file from FILEs",
 	.arguments = "FILE...",
+	.help = "Create repository index file from FILEs",
+	.optgroups = { &optgroup_global, &optgroup_applet },
 	.open_flags = APK_OPENF_READ | APK_OPENF_NO_STATE | APK_OPENF_NO_REPOS,
 	.command_groups = APK_COMMAND_GROUP_REPO,
 	.context_size = sizeof(struct index_ctx),
-	.optgroups = { &optgroup_global, &optgroup_applet },
 	.main = index_main,
 };
 

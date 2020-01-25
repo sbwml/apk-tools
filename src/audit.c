@@ -74,8 +74,8 @@ static const struct apk_option options_applet[] = {
 
 static const struct apk_option_group optgroup_applet = {
 	.name = "Audit",
-	.options = options_applet,
 	.num_options = ARRAY_SIZE(options_applet),
+	.options = options_applet,
 	.parse = option_parse_applet,
 };
 
@@ -347,11 +347,11 @@ static int audit_main(void *ctx, struct apk_database *db, struct apk_string_arra
 
 static struct apk_applet apk_audit = {
 	.name = "audit",
-	.help = "Audit the directories for changes",
 	.arguments = "[directory to audit]...",
+	.help = "Audit the directories for changes",
+	.optgroups = { &optgroup_global, &optgroup_applet },
 	.open_flags = APK_OPENF_READ|APK_OPENF_NO_SCRIPTS|APK_OPENF_NO_REPOS,
 	.context_size = sizeof(struct audit_ctx),
-	.optgroups = { &optgroup_global, &optgroup_applet },
 	.main = audit_main,
 };
 

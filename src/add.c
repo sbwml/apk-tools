@@ -60,8 +60,8 @@ static const struct apk_option options_applet[] = {
 
 static const struct apk_option_group optgroup_applet = {
 	.name = "Add",
-	.options = options_applet,
 	.num_options = ARRAY_SIZE(options_applet),
+	.options = options_applet,
 	.parse = option_parse_applet,
 };
 
@@ -202,13 +202,13 @@ static int add_main(void *ctx, struct apk_database *db, struct apk_string_array 
 
 static struct apk_applet apk_add = {
 	.name = "add",
+	.arguments = "PACKAGE...",
 	.help = "Add PACKAGEs to 'world' and install (or upgrade) "
 		"them, while ensuring that all dependencies are met",
-	.arguments = "PACKAGE...",
+	.optgroups = { &optgroup_global, &optgroup_commit, &optgroup_applet },
 	.open_flags = APK_OPENF_WRITE,
 	.command_groups = APK_COMMAND_GROUP_INSTALL,
 	.context_size = sizeof(struct add_ctx),
-	.optgroups = { &optgroup_global, &optgroup_commit, &optgroup_applet },
 	.main = add_main,
 };
 

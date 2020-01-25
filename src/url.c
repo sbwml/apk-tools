@@ -72,8 +72,8 @@ static void fetch_get_meta(struct apk_istream *is, struct apk_file_meta *meta)
 	struct apk_fetch_istream *fis = container_of(is, struct apk_fetch_istream, is);
 
 	*meta = (struct apk_file_meta) {
-		.atime = fis->urlstat.atime,
 		.mtime = fis->urlstat.mtime,
+		.atime = fis->urlstat.atime,
 	};
 }
 
@@ -127,9 +127,11 @@ static struct apk_istream *apk_istream_fetch(const char *url, time_t since)
 	}
 
 	*fis = (struct apk_fetch_istream) {
-		.is.ops = &fetch_istream_ops,
-		.is.buf = (uint8_t*)(fis+1),
-		.is.buf_size = apk_io_bufsize,
+		.is = {
+			.buf = (uint8_t*)(fis+1),
+			.buf_size = apk_io_bufsize,
+			.ops = &fetch_istream_ops,
+		},
 		.fetchIO = io,
 		.urlstat = fis->urlstat,
 	};

@@ -144,9 +144,11 @@ struct apk_istream *apk_istream_gunzip_mpart(struct apk_istream *is, apk_multipa
 	if (!gis) goto err;
 
 	*gis = (struct apk_gzip_istream) {
-		.is.ops = &gunzip_istream_ops,
-		.is.buf = (uint8_t*)(gis + 1),
-		.is.buf_size = apk_io_bufsize,
+		.is = {
+			.buf = (uint8_t*)(gis + 1),
+			.buf_size = apk_io_bufsize,
+			.ops = &gunzip_istream_ops,
+		},
 		.zis = is,
 		.cb = cb,
 		.cbctx = ctx,
@@ -234,7 +236,9 @@ struct apk_ostream *apk_ostream_gzip(struct apk_ostream *output)
 	if (gos == NULL) goto err;
 
 	*gos = (struct apk_gzip_ostream) {
-		.os.ops = &gzip_ostream_ops,
+		.os = {
+			.ops = &gzip_ostream_ops,
+		},
 		.output = output,
 	};
 

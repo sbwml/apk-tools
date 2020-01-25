@@ -69,8 +69,8 @@ static const struct apk_option options_applet[] = {
 
 static const struct apk_option_group optgroup_applet = {
 	.name = "Upgrade",
-	.options = options_applet,
 	.num_options = ARRAY_SIZE(options_applet),
+	.options = options_applet,
 	.parse = option_parse_applet,
 };
 
@@ -196,10 +196,10 @@ static int upgrade_main(void *ctx, struct apk_database *db, struct apk_string_ar
 static struct apk_applet apk_upgrade = {
 	.name = "upgrade",
 	.help = "Upgrade currently installed packages to match repositories",
+	.optgroups = { &optgroup_global, &optgroup_commit, &optgroup_applet },
 	.open_flags = APK_OPENF_WRITE,
 	.command_groups = APK_COMMAND_GROUP_SYSTEM,
 	.context_size = sizeof(struct upgrade_ctx),
-	.optgroups = { &optgroup_global, &optgroup_commit, &optgroup_applet },
 	.main = upgrade_main,
 };
 

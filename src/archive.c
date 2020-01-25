@@ -150,14 +150,14 @@ int apk_tar_parse(struct apk_istream *is, apk_archive_entry_parser parser,
 		}
 
 		entry = (struct apk_file_info){
+			.name  = entry.name,
+			.uname = buf.uname,
+			.gname = buf.gname,
 			.size  = GET_OCTAL(buf.size),
 			.uid   = apk_resolve_uid(idc, buf.uname, GET_OCTAL(buf.uid)),
 			.gid   = apk_resolve_gid(idc, buf.gname, GET_OCTAL(buf.gid)),
 			.mode  = GET_OCTAL(buf.mode) & 07777,
 			.mtime = GET_OCTAL(buf.mtime),
-			.name  = entry.name,
-			.uname = buf.uname,
-			.gname = buf.gname,
 			.device = makedev(GET_OCTAL(buf.devmajor),
 					  GET_OCTAL(buf.devminor)),
 			.xattrs = entry.xattrs,

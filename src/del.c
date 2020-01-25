@@ -42,8 +42,8 @@ static const struct apk_option options_applet[] = {
 
 static const struct apk_option_group optgroup_applet = {
 	.name = "Delete",
-	.options = options_applet,
 	.num_options = ARRAY_SIZE(options_applet),
+	.options = options_applet,
 	.parse = option_parse_applet,
 };
 
@@ -168,12 +168,12 @@ static int del_main(void *pctx, struct apk_database *db, struct apk_string_array
 
 static struct apk_applet apk_del = {
 	.name = "del",
-	.help = "Remove PACKAGEs from 'world' and uninstall them",
 	.arguments = "PACKAGE...",
+	.help = "Remove PACKAGEs from 'world' and uninstall them",
+	.optgroups = { &optgroup_global, &optgroup_commit, &optgroup_applet },
 	.open_flags = APK_OPENF_WRITE | APK_OPENF_NO_AUTOUPDATE,
 	.command_groups = APK_COMMAND_GROUP_INSTALL,
 	.context_size = sizeof(struct del_ctx),
-	.optgroups = { &optgroup_global, &optgroup_commit, &optgroup_applet },
 	.main = del_main,
 };
 

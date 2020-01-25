@@ -103,8 +103,8 @@ static const struct apk_option options_applet[] = {
 
 static const struct apk_option_group optgroup_applet = {
 	.name = "Fetch",
-	.options = options_applet,
 	.num_options = ARRAY_SIZE(options_applet),
+	.options = options_applet,
 	.parse = option_parse_applet,
 };
 
@@ -346,12 +346,12 @@ static int fetch_main(void *pctx, struct apk_database *db, struct apk_string_arr
 
 static struct apk_applet apk_fetch = {
 	.name = "fetch",
-	.help = "Download PACKAGEs from global repositories to a local directory",
 	.arguments = "PACKAGE...",
+	.help = "Download PACKAGEs from global repositories to a local directory",
+	.optgroups = { &optgroup_global, &optgroup_applet },
 	.open_flags =	APK_OPENF_READ | APK_OPENF_NO_STATE,
 	.command_groups = APK_COMMAND_GROUP_REPO,
 	.context_size = sizeof(struct fetch_ctx),
-	.optgroups = { &optgroup_global, &optgroup_applet },
 	.main = fetch_main,
 };
 

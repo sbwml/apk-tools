@@ -239,8 +239,8 @@ static const struct apk_option options_global[] = {
 
 const struct apk_option_group optgroup_global = {
 	.name = "Global",
-	.options = options_global,
 	.num_options = ARRAY_SIZE(options_global),
+	.options = options_global,
 	.parse = option_parse_global,
 };
 
@@ -286,8 +286,8 @@ static const struct apk_option options_commit[] = {
 
 const struct apk_option_group optgroup_commit = {
 	.name = "Commit",
-	.options = options_commit,
 	.num_options = ARRAY_SIZE(options_commit),
+	.options = options_commit,
 	.parse = option_parse_commit,
 };
 

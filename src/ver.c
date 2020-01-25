@@ -106,8 +106,8 @@ static const struct apk_option options_applet[] = {
 
 static const struct apk_option_group optgroup_applet = {
 	.name = "Version",
-	.options = options_applet,
 	.num_options = ARRAY_SIZE(options_applet),
+	.options = options_applet,
 	.parse = option_parse_applet,
 };
 
@@ -202,9 +202,9 @@ static struct apk_applet apk_ver = {
 	.name = "version",
 	.help = "Compare package versions (in installed database vs. available) "
 		"or do tests on literal version strings",
+	.optgroups = { &optgroup_global, &optgroup_applet },
 	.open_flags = APK_OPENF_READ,
 	.context_size = sizeof(struct ver_ctx),
-	.optgroups = { &optgroup_global, &optgroup_applet },
 	.main = ver_main,
 };
 

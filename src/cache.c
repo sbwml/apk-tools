@@ -56,8 +56,8 @@ static const struct apk_option options_applet[] = {
 
 static const struct apk_option_group optgroup_applet = {
 	.name = "Cache",
-	.options = options_applet,
 	.num_options = ARRAY_SIZE(options_applet),
+	.options = options_applet,
 	.parse = option_parse_applet,
 };
 
@@ -184,13 +184,13 @@ err:
 
 static struct apk_applet apk_cache = {
 	.name = "cache",
+	.arguments = "sync | clean | download",
 	.help = "Download missing PACKAGEs to cache and/or delete "
 		"unneeded files from cache",
-	.arguments = "sync | clean | download",
+	.optgroups = { &optgroup_global, &optgroup_applet },
 	.open_flags = APK_OPENF_READ|APK_OPENF_NO_SCRIPTS|APK_OPENF_CACHE_WRITE,
 	.command_groups = APK_COMMAND_GROUP_SYSTEM,
 	.context_size = sizeof(struct cache_ctx),
-	.optgroups = { &optgroup_global, &optgroup_applet },
 	.main = cache_main,
 };
 

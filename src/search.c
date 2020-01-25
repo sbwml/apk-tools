@@ -120,8 +120,8 @@ static const struct apk_option options_applet[] = {
 
 static const struct apk_option_group optgroup_applet = {
 	.name = "Search",
-	.options = options_applet,
 	.num_options = ARRAY_SIZE(options_applet),
+	.options = options_applet,
 	.parse = option_parse_applet,
 };
 
@@ -206,12 +206,12 @@ static int search_main(void *pctx, struct apk_database *db, struct apk_string_ar
 
 static struct apk_applet apk_search = {
 	.name = "search",
-	.help = "Search package by PATTERNs or by indexed dependencies",
 	.arguments = "PATTERN",
+	.help = "Search package by PATTERNs or by indexed dependencies",
+	.optgroups = { &optgroup_global, &optgroup_applet },
 	.open_flags = APK_OPENF_READ | APK_OPENF_NO_STATE,
 	.command_groups = APK_COMMAND_GROUP_QUERY,
 	.context_size = sizeof(struct search_ctx),
-	.optgroups = { &optgroup_global, &optgroup_applet },
 	.main = search_main,
 };
 

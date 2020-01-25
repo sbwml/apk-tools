@@ -469,19 +469,19 @@ static const struct apk_option options_applet[] = {
 
 static const struct apk_option_group optgroup_applet = {
 	.name = "Info",
-	.options = options_applet,
 	.num_options = ARRAY_SIZE(options_applet),
+	.options = options_applet,
 	.parse = option_parse_applet,
 };
 
 static struct apk_applet apk_info = {
 	.name = "info",
-	.help = "Give detailed information about PACKAGEs or repositories",
 	.arguments = "PACKAGE...",
+	.help = "Give detailed information about PACKAGEs or repositories",
+	.optgroups = { &optgroup_global, &optgroup_applet },
 	.open_flags = APK_OPENF_READ,
 	.command_groups = APK_COMMAND_GROUP_QUERY,
 	.context_size = sizeof(struct info_ctx),
-	.optgroups = { &optgroup_global, &optgroup_applet },
 	.main = info_main,
 };
 

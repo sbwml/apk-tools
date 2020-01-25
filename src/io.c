@@ -185,8 +185,8 @@ static void segment_get_meta(struct apk_istream *is, struct apk_file_meta *meta)
 {
 	struct apk_segment_istream *sis = container_of(is, struct apk_segment_istream, is);
 	*meta = (struct apk_file_meta) {
-		.atime = sis->mtime,
 		.mtime = sis->mtime,
+		.atime = sis->mtime,
 	};
 }
 
@@ -229,11 +229,13 @@ static const struct apk_istream_ops segment_istream_ops = {
 struct apk_istream *apk_istream_segment(struct apk_segment_istream *sis, struct apk_istream *is, size_t len, time_t mtime)
 {
 	*sis = (struct apk_segment_istream) {
-		.is.ops = &segment_istream_ops,
-		.is.buf = is->buf,
-		.is.buf_size = is->buf_size,
-		.is.ptr = is->ptr,
-		.is.end = is->end,
+		.is = {
+			.ptr = is->ptr,
+			.end = is->end,
+			.buf = is->buf,
+			.buf_size = is->buf_size,
+			.ops = &segment_istream_ops,
+		},
 		.pis = is,
 		.bytes_left = len,
 		.mtime = mtime,
@@ -328,11 +330,13 @@ struct apk_istream *apk_istream_tee(struct apk_istream *from, int atfd, const ch
 	}
 
 	*tee = (struct apk_tee_istream) {
-		.is.ops = &tee_istream_ops,
-		.is.buf = from->buf,
-		.is.buf_size = from->buf_size,
-		.is.ptr = from->ptr,
-		.is.end = from->end,
+		.is = {
+			.ptr = from->ptr,
+			.end = from->end,
+			.buf = from->buf,
+			.buf_size = from->buf_size,
+			.ops = &tee_istream_ops,
+		},
 		.inner_is = from,
 		.fd = fd,
 		.copy_meta = copy_meta,
@@ -404,13 +408,15 @@ static inline struct apk_istream *apk_mmap_istream_from_fd(int fd)
 	}
 
 	*mis = (struct apk_mmap_istream) {
-		.is.flags = APK_ISTREAM_SINGLE_READ,
-		.is.err = 1,
-		.is.ops = &mmap_istream_ops,
-		.is.buf = ptr,
-		.is.buf_size = st.st_size,
-		.is.ptr = ptr,
-		.is.end = ptr + st.st_size,
+		.is = {
+			.ptr = ptr,
+			.end = ptr + st.st_size,
+			.buf = ptr,
+			.buf_size = (size_t)st.st_size,
+			.err = 1,
+			.flags = APK_ISTREAM_SINGLE_READ,
+			.ops = &mmap_istream_ops,
+		},
 		.fd = fd,
 	};
 	return &mis->is;
@@ -464,9 +470,11 @@ struct apk_istream *apk_istream_from_fd(int fd)
 	}
 
 	*fis = (struct apk_fd_istream) {
-		.is.ops = &fd_istream_ops,
-		.is.buf = (uint8_t *)(fis + 1),
-		.is.buf_size = apk_io_bufsize,
+		.is = {
+			.buf = (uint8_t *)(fis + 1),
+			.buf_size = apk_io_bufsize,
+			.ops = &fd_istream_ops,
+		},
 		.fd = fd,
 	};
 
@@ -915,7 +923,9 @@ struct apk_ostream *apk_ostream_to_fd(int fd)
 	}
 
 	*fos = (struct apk_fd_ostream) {
-		.os.ops = &fd_ostream_ops,
+		.os = {
+			.ops = &fd_ostream_ops,
+		},
 		.fd = fd,
 	};
 
@@ -983,7 +993,9 @@ struct apk_ostream *apk_ostream_counter(off_t *counter)
 		return NULL;
 
 	*cos = (struct apk_counter_ostream) {
-		.os.ops = &counter_ostream_ops,
+		.os = {
+			.ops = &counter_ostream_ops,
+		},
 		.counter = counter,
 	};
 
