@@ -35,7 +35,7 @@ const char *apk_url_local_file(const char *url)
 
 struct apk_fetch_istream {
 	struct apk_istream is;
-	fetchIO *fetchIO;
+	fetchIO *fIO;
 	struct url_stat urlstat;
 };
 
@@ -82,7 +82,7 @@ static ssize_t fetch_read(struct apk_istream *is, void *ptr, size_t size)
 	struct apk_fetch_istream *fis = container_of(is, struct apk_fetch_istream, is);
 	ssize_t r;
 
-	r = fetchIO_read(fis->fetchIO, ptr, size);
+	r = fetchIO_read(fis->fIO, ptr, size);
 	if (r < 0) return -EIO;
 	return r;
 }
@@ -91,7 +91,7 @@ static void fetch_close(struct apk_istream *is)
 {
 	struct apk_fetch_istream *fis = container_of(is, struct apk_fetch_istream, is);
 
-	fetchIO_close(fis->fetchIO);
+	fetchIO_close(fis->fIO);
 	free(fis);
 }
 
@@ -132,7 +132,7 @@ static struct apk_istream *apk_istream_fetch(const char *url, time_t since)
 			.buf_size = apk_io_bufsize,
 			.ops = &fetch_istream_ops,
 		},
-		.fetchIO = io,
+		.fIO = io,
 		.urlstat = fis->urlstat,
 	};
 	fetchFreeURL(u);
