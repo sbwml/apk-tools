@@ -122,9 +122,9 @@ static void cache_clean_item(struct apk_database *db, int dirfd, const char *nam
 	if (strcmp(name, "installed") == 0) return;
 
 	if (pkg) {
-		if ((apk_flags & APK_PURGE) && pkg->ipkg == NULL) goto delete;
-		if (pkg->repos & db->local_repos & ~BIT(APK_REPOSITORY_CACHED)) goto delete;
-		if (pkg->ipkg == NULL && !(pkg->repos & ~BIT(APK_REPOSITORY_CACHED))) goto delete;
+		if ((apk_flags & APK_PURGE) && pkg->ipkg == NULL) goto delete_item;
+		if (pkg->repos & db->local_repos & ~BIT(APK_REPOSITORY_CACHED)) goto delete_item;
+		if (pkg->ipkg == NULL && !(pkg->repos & ~BIT(APK_REPOSITORY_CACHED))) goto delete_item;
 		return;
 	}
 
@@ -135,7 +135,7 @@ static void cache_clean_item(struct apk_database *db, int dirfd, const char *nam
 		if (apk_blob_compare(b, APK_BLOB_STR(tmp)) == 0) return;
 	}
 
-delete:
+delete_item:
 	if (apk_verbosity >= 2)
 		apk_message("deleting %s", name);
 	if (!(apk_flags & APK_SIMULATE)) {

@@ -837,7 +837,7 @@ http_request(struct url *URL, const char *op, struct url_stat *us,
     struct url *purl, const char *flags)
 {
 	conn_t *conn;
-	struct url *url, *new;
+	struct url *url, *new_url;
 	int chunked, direct, if_modified_since, need_auth, noredirect, nocache;
 	int keep_alive, verbose, cached;
 	int e, i, n, val;
@@ -870,7 +870,7 @@ http_request(struct url *URL, const char *op, struct url_stat *us,
 	e = HTTP_PROTOCOL_ERROR;
 	need_auth = 0;
 	do {
-		new = NULL;
+		new_url = NULL;
 		chunked = 0;
 		offset = 0;
 		clength = -1;
@@ -1066,26 +1066,26 @@ http_request(struct url *URL, const char *op, struct url_stat *us,
 			case hdr_location:
 				if (!HTTP_REDIRECT(conn->err))
 					break;
-				if (new)
-					free(new);
+				if (new_url)
+					free(new_url);
 				if (verbose)
 					fetch_info("%d redirect to %s", conn->err, p);
 				if (*p == '/')
 					/* absolute path */
-					new = fetchMakeURL(url->scheme, url->host, url->port, p,
+					new_url = fetchMakeURL(url->scheme, url->host, url->port, p,
 					    url->user, url->pwd);
 				else
-					new = fetchParseURL(p);
-				if (new == NULL) {
+					new_url = fetchParseURL(p);
+				if (new_url == NULL) {
 					/* XXX should set an error code */
 					goto ouch;
 				}
-				if (!*new->user && !*new->pwd) {
-					strcpy(new->user, url->user);
-					strcpy(new->pwd, url->pwd);
+				if (!*new_url->user && !*new_url->pwd) {
+					strcpy(new_url->user, url->user);
+					strcpy(new_url->pwd, url->pwd);
 				}
-				new->offset = url->offset;
-				new->length = url->length;
+				new_url->offset = url->offset;
+				new_url->length = url->length;
 				break;
 			case hdr_transfer_encoding:
 				/* XXX weak test*/
@@ -1138,11 +1138,11 @@ http_request(struct url *URL, const char *op, struct url_stat *us,
 		need_auth = 0;
 		fetch_close(conn);
 		conn = NULL;
-		if (!new)
+		if (!new_url)
 			break;
 		if (url != URL)
 			fetchFreeURL(url);
-		url = new;
+		url = new_url;
 	} while (++i < n);
 
 	/* we failed, or ran out of retries */
