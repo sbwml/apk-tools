@@ -53,7 +53,7 @@ zlib1g policy:
 				continue;
 			for (j = 0; j < db->num_repo_tags; j++) {
 				if (db->repo_tags[j].allowed_repos & p->pkg->repos)
-					printf("    "BLOB_FMT"%s%s\n",
+					printf("    " BLOB_FMT "%s%s\n",
 						BLOB_PRINTF(db->repo_tags[j].tag),
 						j == 0 ? "" : " ",
 						repo->url);

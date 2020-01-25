@@ -21,7 +21,7 @@ struct apk_provider {
 };
 APK_ARRAY(apk_provider_array, struct apk_provider);
 
-#define PROVIDER_FMT		"%s%s"BLOB_FMT
+#define PROVIDER_FMT		"%s%s" BLOB_FMT
 #define PROVIDER_PRINTF(n,p)	(n)->name, (p)->version->len ? "-" : "", BLOB_PRINTF(*(p)->version)
 
 #endif

@@ -2422,7 +2422,7 @@ static int apk_db_install_archive_entry(void *_ctx,
 	    strncmp(ae->name, "/../"+1, 3) == 0 ||
 	    strstr(ae->name, "/./") ||
 	    strstr(ae->name, "/../")) {
-		apk_warning(PKG_VER_FMT": ignoring malicious file %s",
+		apk_warning(PKG_VER_FMT ": ignoring malicious file %s",
 			    PKG_VER_PRINTF(pkg), ae->name);
 		ipkg->broken_files = 1;
 		return 0;
@@ -2443,7 +2443,7 @@ static int apk_db_install_archive_entry(void *_ctx,
 		diri = ctx->diri = find_diri(ipkg, bdir, diri, &ctx->file_diri_node);
 		if (diri == NULL) {
 			if (!APK_BLOB_IS_NULL(bdir)) {
-				apk_error(PKG_VER_FMT": "BLOB_FMT": no dirent in archive",
+				apk_error(PKG_VER_FMT ": " BLOB_FMT ": no dirent in archive",
 					  PKG_VER_PRINTF(pkg), BLOB_PRINTF(name));
 				ipkg->broken_files = 1;
 				return 0;
@@ -2478,7 +2478,7 @@ static int apk_db_install_archive_entry(void *_ctx,
 			} while (0);
 
 			if (!link_target_file) {
-				apk_error(PKG_VER_FMT": "BLOB_FMT": no hard link target (%s) in archive",
+				apk_error(PKG_VER_FMT ": " BLOB_FMT ": no hard link target (%s) in archive",
 					  PKG_VER_PRINTF(pkg), BLOB_PRINTF(name), ae->link_target);
 				ipkg->broken_files = 1;
 				return 0;
@@ -2525,12 +2525,12 @@ static int apk_db_install_archive_entry(void *_ctx,
 					break;
 
 				if (!(apk_force & APK_FORCE_OVERWRITE)) {
-					apk_error(PKG_VER_FMT": trying to overwrite %s owned by "PKG_VER_FMT".",
+					apk_error(PKG_VER_FMT ": trying to overwrite %s owned by " PKG_VER_FMT ".",
 						  PKG_VER_PRINTF(pkg), ae->name, PKG_VER_PRINTF(opkg));
 					ipkg->broken_files = 1;
 					return 0;
 				}
-				apk_warning(PKG_VER_FMT": overwriting %s owned by "PKG_VER_FMT".",
+				apk_warning(PKG_VER_FMT ": overwriting %s owned by " PKG_VER_FMT ".",
 					    PKG_VER_PRINTF(pkg), ae->name, PKG_VER_PRINTF(opkg));
 			} while (0);
 		}
@@ -2559,7 +2559,7 @@ static int apk_db_install_archive_entry(void *_ctx,
 			else
 				memcpy(&file->csum, &ae->csum, sizeof file->csum);
 			if (file->csum.type == APK_CHECKSUM_NONE) {
-				apk_warning(PKG_VER_FMT": no checksum for file %s",
+				apk_warning(PKG_VER_FMT ": no checksum for file %s",
 					    PKG_VER_PRINTF(pkg), ae->name);
 				ipkg->broken_files = 1;
 			}
@@ -2706,7 +2706,7 @@ static void apk_db_migrate_files(struct apk_database *db,
 						 DIR_FILE_PRINTF(diri->dir, file));
 					if (renameat(db->root_fd, tmpname,
 						     db->root_fd, name) != 0) {
-						apk_error(PKG_VER_FMT": failed to rename %s to %s.",
+						apk_error(PKG_VER_FMT ": failed to rename %s to %s.",
 							  PKG_VER_PRINTF(ipkg->pkg),
 							  tmpname, name);
 						ipkg->broken_files = 1;
@@ -2717,7 +2717,7 @@ static void apk_db_migrate_files(struct apk_database *db,
 				/* Overwrite the old file */
 				if (renameat(db->root_fd, tmpname,
 					     db->root_fd, name) != 0) {
-					apk_error(PKG_VER_FMT": failed to rename %s to %s.",
+					apk_error(PKG_VER_FMT ": failed to rename %s to %s.",
 						  PKG_VER_PRINTF(ipkg->pkg), tmpname, name);
 					ipkg->broken_files = 1;
 				}
@@ -2788,7 +2788,7 @@ static int apk_db_unpack_pkg(struct apk_database *db,
 		if (!IS_ERR_OR_NULL(cache_is))
 			is = cache_is;
 		else
-			apk_warning(PKG_VER_FMT": unable to cache: %s",
+			apk_warning(PKG_VER_FMT ": unable to cache: %s",
 				    PKG_VER_PRINTF(pkg), apk_error_str(errno));
 	}
 
@@ -2820,7 +2820,7 @@ static int apk_db_unpack_pkg(struct apk_database *db,
 	apk_db_run_pending_script(&ctx);
 	return 0;
 err_msg:
-	apk_error(PKG_VER_FMT": %s", PKG_VER_PRINTF(pkg), apk_error_str(r));
+	apk_error(PKG_VER_FMT ": %s", PKG_VER_PRINTF(pkg), apk_error_str(r));
 	return r;
 }
 

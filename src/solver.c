@@ -409,7 +409,7 @@ static void reconsider_name(struct apk_solver_state *ss, struct apk_name *name)
 		}
 		has_iif |= pkg->ss.iif_triggered;
 		no_iif  &= pkg->ss.iif_failed;
-		dbg_printf("  "PKG_VER_FMT": iif_triggered=%d iif_failed=%d, no_iif=%d\n",
+		dbg_printf("  " PKG_VER_FMT ": iif_triggered=%d iif_failed=%d, no_iif=%d\n",
 			PKG_VER_PRINTF(pkg), pkg->ss.iif_triggered, pkg->ss.iif_failed,
 			no_iif);
 
@@ -644,7 +644,7 @@ static void assign_name(struct apk_solver_state *ss, struct apk_name *name, stru
 	}
 
 	if (p.pkg)
-		dbg_printf("assign %s to "PKG_VER_FMT"\n", name->name, PKG_VER_PRINTF(p.pkg));
+		dbg_printf("assign %s to " PKG_VER_FMT "\n", name->name, PKG_VER_PRINTF(p.pkg));
 
 	name->ss.locked = 1;
 	name->ss.chosen = p;
@@ -678,7 +678,7 @@ static void select_package(struct apk_solver_state *ss, struct apk_name *name)
 
 	if (name->ss.requirers || name->ss.has_iif) {
 		foreach_array_item(p, name->providers) {
-			dbg_printf("  consider "PKG_VER_FMT" iif_triggered=%d, tag_ok=%d, selectable=%d, available=%d, flags=0x%x, provider_priority=%d, installed=%d\n",
+			dbg_printf("  consider " PKG_VER_FMT " iif_triggered=%d, tag_ok=%d, selectable=%d, available=%d, flags=0x%x, provider_priority=%d, installed=%d\n",
 				PKG_VER_PRINTF(p->pkg),
 				p->pkg->ss.iif_triggered, p->pkg->ss.tag_ok,
 				p->pkg->ss.pkg_selectable, p->pkg->ss.pkg_available,
@@ -861,7 +861,7 @@ static void cset_gen_name_change(struct apk_solver_state *ss, struct apk_name *n
 	foreach_array_item(d, pkg->depends)
 		cset_gen_dep(ss, pkg, d);
 
-	dbg_printf("Selecting: "PKG_VER_FMT"%s\n", PKG_VER_PRINTF(pkg), pkg->ss.pkg_selectable ? "" : " [NOT SELECTABLE]");
+	dbg_printf("Selecting: " PKG_VER_FMT "%s\n", PKG_VER_PRINTF(pkg), pkg->ss.pkg_selectable ? "" : " [NOT SELECTABLE]");
 	record_change(ss, opkg, pkg);
 
 	foreach_array_item(pname, pkg->name->rinstall_if)
