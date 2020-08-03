@@ -16,6 +16,8 @@
 #include "apk_database.h"
 #include "apk_print.h"
 
+extern const char * const apk_installed_file;
+
 struct info_ctx {
 	struct apk_database *db;
 	void (*action)(struct info_ctx *ctx, struct apk_database *db, struct apk_string_array *args);
@@ -36,6 +38,7 @@ struct info_ctx {
 #define APK_INFO_LICENSE	BIT(11)
 #define APK_INFO_MAINTAINER	BIT(12)
 #define APK_INFO_ORIGIN		BIT(13)
+#define APK_INFO_REPOSITORY	BIT(14)
 
 struct info_field {
 	const char *field_name;
@@ -53,6 +56,7 @@ static void print_info_dep_list(const struct info_field *field, struct apk_datab
 static void print_info_idep_list(const struct info_field *field, struct apk_database *db, struct apk_package *pkg);
 static void print_info_revdep(const struct info_field *field, struct apk_database *db, struct apk_package *pkg);
 static void print_info_rinstall_if(const struct info_field *field, struct apk_database *db, struct apk_package *pkg);
+static void print_info_repository(const struct info_field *field, struct apk_database *db, struct apk_package *pkg);
 
 #define package_offset(field) \
 	(void *) offsetof(struct apk_package, field)
@@ -63,6 +67,7 @@ static void print_info_rinstall_if(const struct info_field *field, struct apk_da
 static struct info_field info_fields[] = {
 	{"Package", 0, print_info_name, NULL},
 	{"Version", 0, print_info_blob, package_offset(version)},
+	{"Repository", APK_INFO_REPOSITORY, print_info_repository, NULL},
 	{"Source-Package", APK_INFO_ORIGIN, print_info_blob, package_offset(origin)},
 	{"Description", APK_INFO_DESC, print_info_str, package_offset(description)},
 	{"URL", APK_INFO_URL, print_info_str, package_offset(url)},
@@ -119,7 +124,7 @@ static void print_info_triggers(const struct info_field *field, struct apk_datab
 	struct apk_installed_package *ipkg = pkg->ipkg;
 	char **trigger;
 
-	if (!ipkg->triggers->num)
+	if (pkg->ipkg == NULL || !ipkg->triggers->num)
 		return;
 
 	printf("%s: ", field->field_name);
@@ -215,6 +220,30 @@ static void print_info_rinstall_if(const struct info_field *field, struct apk_da
 			printf("  " PKG_VER_FMT "\n",
 			       PKG_VER_PRINTF(pkg0));
 			break;
+		}
+	}
+}
+
+static void print_info_repository(const struct info_field *field, struct apk_database *db, struct apk_package *pkg)
+{
+	int i, j;
+	struct apk_repository *repo;
+
+	printf("%s:\n", field->field_name);
+
+	if (pkg->ipkg != NULL)
+		printf("  %s%s\n", db->root, apk_installed_file);
+
+	for (i = 0; i < db->num_repos; i++) {
+		repo = &db->repos[i];
+		if (!(BIT(i) & pkg->repos))
+			continue;
+		for (j = 0; j < db->num_repo_tags; j++) {
+			if (db->repo_tags[j].allowed_repos & pkg->repos)
+				printf("  "BLOB_FMT"%s%s\n",
+					BLOB_PRINTF(db->repo_tags[j].tag),
+					j == 0 ? "" : " ",
+					repo->url);
 		}
 	}
 }
