@@ -35,9 +35,6 @@ display the appropriate information, then an empty line terminates that field.
 	name. The exit status is the number of given packages not installed.
 	Thus, zero (or success) is returned if all named packages are installed.
 
-*-L, --contents*
-	List files included in the package.
-
 *-i, --install-if*
 	List the package's install_if rule. When the dependencies in this list
 	are satisfied, the package will be installed automatically.
@@ -63,6 +60,12 @@ display the appropriate information, then an empty line terminates that field.
 
 *--license*
 	Print the package SPDX license identifier.
+
+*--maintainer*
+	Print the package maintainer.
+
+*--origin*
+	Print the source package the package belongs to.
 
 *--replaces*
 	List the other packages for which this package is marked as a
