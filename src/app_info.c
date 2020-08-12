@@ -96,7 +96,8 @@ static void print_info_blob(const struct info_field *field, struct apk_database 
 	(void) db;
 	struct apk_blob **blob = (void *)((char *) pkg + (ptrdiff_t) field->action_data);
 
-	printf("%s: " BLOB_FMT "\n", field->field_name, BLOB_PRINTF(**blob));
+	if (*blob != NULL)
+		printf("%s: " BLOB_FMT "\n", field->field_name, BLOB_PRINTF(**blob));
 }
 
 static void print_info_str(const struct info_field *field, struct apk_database *db, struct apk_package *pkg)
@@ -104,7 +105,8 @@ static void print_info_str(const struct info_field *field, struct apk_database *
 	(void) db;
 	char **str = (void *)((char *) pkg + (ptrdiff_t) field->action_data);
 
-	printf("%s: %s\n", field->field_name, *str);
+	if (*str != NULL)
+		printf("%s: %s\n", field->field_name, *str);
 }
 
 static void print_info_size(const struct info_field *field, struct apk_database *db, struct apk_package *pkg)
