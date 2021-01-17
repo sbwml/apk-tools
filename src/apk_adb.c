@@ -192,7 +192,7 @@ static struct adb_scalar_schema scalar_oct = {
 static apk_blob_t hsize_tostring(struct adb *db, adb_val_t val, char *buf, size_t bufsz)
 {
 	off_t v = adb_r_int(db, val);
-	const char *unit = apk_get_human_size(v, &v);
+	const char *unit = apk_get_human_size(0, v, &v);
 
 	return APK_BLOB_PTR_LEN(buf, snprintf(buf, bufsz, "%jd %s", (intmax_t)v, unit));
 }

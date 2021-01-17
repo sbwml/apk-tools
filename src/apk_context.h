@@ -53,7 +53,7 @@ struct apk_database;
 				 APK_OPENF_NO_WORLD)
 
 struct apk_ctx {
-	unsigned int flags, force, lock_wait;
+	unsigned int flags, force, lock_wait, byte_size;
 	struct apk_out out;
 	struct apk_progress progress;
 	unsigned int cache_max_age;

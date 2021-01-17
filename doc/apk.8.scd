@@ -103,6 +103,9 @@ The following options are available for all commands.
 *--arch* _ARCH_
 	Temporarily override architecture, to be combined with --root.
 
+*--byte-size*
+	Always print size information in bytes.
+
 *--cache-dir* _CACHEDIR_
 	Temporarily override the cache directory. _CACHEDIR_ is treated relative
 	to the _ROOT_.

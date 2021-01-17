@@ -63,13 +63,17 @@ const char *apk_error_str(int error)
 	}
 }
 
-const char *apk_get_human_size(off_t size, off_t *dest)
+const char *apk_get_human_size(unsigned int byte_size, off_t size, off_t *dest)
 {
 	static const char *size_units[] = {"B", "KiB", "MiB", "GiB", "TiB"};
 	size_t i;
 	off_t s;
 
 	assert(size >= 0);
+	if (byte_size) {
+		if (dest) *dest = size;
+		return size_units[0];
+	}
 
 	for (i = 0, s = size; s >= 10000 && i < ARRAY_SIZE(size_units); i++)
 		s /= 1024;

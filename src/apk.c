@@ -62,6 +62,7 @@ static void version(struct apk_out *out)
 #define GLOBAL_OPTIONS(OPT) \
 	OPT(OPT_GLOBAL_allow_untrusted,		"allow-untrusted") \
 	OPT(OPT_GLOBAL_arch,			APK_OPT_ARG "arch") \
+	OPT(OPT_GLOBAL_byte_size,               "byte-size") \
 	OPT(OPT_GLOBAL_cache_dir,		APK_OPT_ARG "cache-dir") \
 	OPT(OPT_GLOBAL_cache_max_age,		APK_OPT_ARG "cache-max-age") \
 	OPT(OPT_GLOBAL_force,			APK_OPT_SH("f") "force") \
@@ -148,6 +149,9 @@ static int option_parse_global(void *ctx, struct apk_ctx *ac, int opt, const cha
 		break;
 	case OPT_GLOBAL_force_non_repository:
 		ac->force |= APK_FORCE_NON_REPOSITORY;
+		break;
+	case OPT_GLOBAL_byte_size:
+		ac->byte_size = 1;
 		break;
 	case OPT_GLOBAL_force_binary_stdout:
 		ac->force |= APK_FORCE_BINARY_STDOUT;

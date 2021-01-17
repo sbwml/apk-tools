@@ -176,7 +176,7 @@ static void info_print_size(struct apk_database *db, struct apk_package *pkg)
 	off_t size;
 	const char *size_unit;
 
-	size_unit = apk_get_human_size(pkg->installed_size, &size);
+	size_unit = apk_get_human_size(db->ctx->byte_size, pkg->installed_size, &size);
 	if (verbosity > 1)
 		printf("%s: %lld %s", pkg->name->name,
 		       (long long)size, size_unit);

@@ -288,7 +288,7 @@ int apk_solver_commit_changeset(struct apk_database *db,
 		if (change->old_pkg)
 			size_diff -= change->old_pkg->installed_size;
 	}
-	size_unit = apk_get_human_size(llabs(size_diff), &humanized);
+	size_unit = apk_get_human_size(db->ctx->byte_size, llabs(size_diff), &humanized);
 
 	if ((apk_out_verbosity(out) > 1 || (db->ctx->flags & APK_INTERACTIVE)) &&
 	    !(db->ctx->flags & APK_SIMULATE)) {
