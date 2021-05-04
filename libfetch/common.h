@@ -38,6 +38,7 @@
 #define FTP_DEFAULT_PROXY_PORT	21
 #define HTTP_DEFAULT_PROXY_PORT	3128
 
+#include <tls.h>
 #include "openssl-compat.h"
 
 #if defined(__GNUC__) && __GNUC__ >= 3
@@ -65,10 +66,8 @@ struct fetchconn {
 	char		*next_buf;	/* pending buffer, e.g. after getln */
 	size_t		 next_len;	/* size of pending buffer */
 	int		 err;		/* last protocol reply code */
-	SSL		*ssl;		/* SSL handle */
-	SSL_CTX		*ssl_ctx;	/* SSL context */
-	X509		*ssl_cert;	/* server certificate */
-	const SSL_METHOD *ssl_meth;	/* SSL method */
+	struct tls	*tls;		/* libtls handle */
+	struct tls_config *tls_config;  /* libtls config */
 	char		*ftp_home;
 	struct url	*cache_url;
 	int		cache_af;

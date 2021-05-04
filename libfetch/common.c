@@ -417,32 +417,42 @@ fetch_cache_put(conn_t *conn, int (*closecb)(conn_t *))
  *   1. If compile time #define CA_CERT_FILE is set, and it exists, use it.
  *   2. Use system default CA store settings.
  */
-static int fetch_ssl_setup_peer_verification(SSL_CTX *ctx, int verbose)
+static int fetch_ssl_setup_peer_verification(conn_t *conn, int verbose)
 {
-	const char *ca_file = NULL;
+	const char *ca_file = NULL, *crl_file = NULL;
+
+	/* set up default verification settings */
+	tls_config_verify(conn->tls_config);
 
 #ifdef CA_CERT_FILE
 	if (access(CA_CERT_FILE, R_OK) == 0) {
 		ca_file = CA_CERT_FILE;
 #ifdef CA_CRL_FILE
 		if (access(CA_CRL_FILE, R_OK) == 0) {
-			X509_STORE *crl_store = SSL_CTX_get_cert_store(ctx);
-			X509_LOOKUP *crl_lookup = X509_STORE_add_lookup(crl_store, X509_LOOKUP_file());
-			if (!crl_lookup || !X509_load_crl_file(crl_lookup, CA_CRL_FILE, X509_FILETYPE_PEM)) {
-				fprintf(stderr, "Could not load CRL file %s\n", CA_CRL_FILE);
-				return 0;
-			}
-			X509_STORE_set_flags(crl_store, X509_V_FLAG_CRL_CHECK | X509_V_FLAG_CRL_CHECK_ALL);
+			crl_file = CA_CRL_FILE;
 		}
 #endif
 	}
 #endif
-	if (ca_file)
-		SSL_CTX_load_verify_locations(ctx, ca_file, NULL);
-	else
-		SSL_CTX_set_default_verify_paths(ctx);
 
-	SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, 0);
+	if (ca_file != NULL) {
+		if (tls_config_set_ca_file(conn->tls_config, ca_file) == -1) {
+			fprintf(stderr, "While loading CA file: %s\n", tls_config_error(conn->tls_config));
+			return 0;
+		}
+
+		if (crl_file != NULL) {
+			if (tls_config_set_crl_file(conn->tls_config, crl_file) == -1) {
+				fprintf(stderr, "While loading CRL file: %s\n", tls_config_error(conn->tls_config));
+				return 0;
+			}
+		}
+	}
+
+	if (getenv("SSL_NO_VERIFY_HOSTNAME") != NULL) {
+		tls_config_insecure_noverifyname(conn->tls_config);
+	}
+
 	return 1;
 }
 
@@ -455,7 +465,7 @@ static int fetch_ssl_setup_peer_verification(SSL_CTX *ctx, int verbose)
  * If the key file is not specified, it is assumed that the certificate
  * file is a .pem file containing both the cert and the key.
  */
-static int fetch_ssl_setup_client_certificate(SSL_CTX *ctx, int verbose)
+static int fetch_ssl_setup_client_certificate(conn_t *conn, int verbose)
 {
 	const char *cert_file = NULL, *key_file = NULL;
 
@@ -479,14 +489,8 @@ static int fetch_ssl_setup_client_certificate(SSL_CTX *ctx, int verbose)
 		fetch_info("Using client key file: %s", key_file);
 	}
 
-	if (SSL_CTX_use_certificate_chain_file(ctx, cert_file) != 1) {
-		fprintf(stderr, "Could not load client certificate %s\n",
-			cert_file);
-		return 0;
-	}
-
-	if (SSL_CTX_use_PrivateKey_file(ctx, key_file, SSL_FILETYPE_PEM) != 1) {
-		fprintf(stderr, "Could not load client key %s\n", key_file);
+	if (tls_config_set_keypair_file(conn->tls_config, cert_file, key_file) == -1) {
+		fprintf(stderr, "Could not load client certificate: %s\n", tls_config_error(conn->tls_config));
 		return 0;
 	}
 
@@ -499,56 +503,36 @@ static int fetch_ssl_setup_client_certificate(SSL_CTX *ctx, int verbose)
 int
 fetch_ssl(conn_t *conn, const struct url *URL, int verbose)
 {
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-	conn->ssl_meth = SSLv23_client_method();
-#else
-	conn->ssl_meth = TLS_client_method();
-#endif
-	conn->ssl_ctx = SSL_CTX_new(conn->ssl_meth);
-	SSL_CTX_set_mode(conn->ssl_ctx, SSL_MODE_AUTO_RETRY);
-
-	if (!fetch_ssl_setup_peer_verification(conn->ssl_ctx, verbose))
-		return (-1);
-	if (!fetch_ssl_setup_client_certificate(conn->ssl_ctx, verbose))
-		return (-1);
-
-	conn->ssl = SSL_new(conn->ssl_ctx);
-	if (conn->ssl == NULL){
-		fprintf(stderr, "SSL context creation failed\n");
+	conn->tls = tls_client();
+	if (conn->tls == NULL) {
+		fprintf(stderr, "TLS context creation failed\n");
 		return (-1);
 	}
+
+	conn->tls_config = tls_config_new();
+	if (conn->tls_config == NULL) {
+		fprintf(stderr, "TLS config context creation failed\n");
+		return (-1);
+	}
+
+	if (!fetch_ssl_setup_peer_verification(conn, verbose))
+		return (-1);
+	if (!fetch_ssl_setup_client_certificate(conn, verbose))
+		return (-1);
+
 	conn->buf_events = 0;
-	SSL_set_fd(conn->ssl, conn->sd);
-	if (!SSL_set_tlsext_host_name(conn->ssl, (char *)(uintptr_t)URL->host)) {
-		fprintf(stderr,
-		    "TLS server name indication extension failed for host %s\n",
-		    URL->host);
+
+	if (tls_configure(conn->tls, conn->tls_config) == -1){
+		fprintf(stderr, "Configuring TLS context failed: %s\n", tls_error(conn->tls));
 		return (-1);
 	}
 
-	if (SSL_connect(conn->ssl) == -1){
-		ERR_print_errors_fp(stderr);
+	if (tls_connect_fds(conn->tls, conn->sd, conn->sd, URL->host) == -1){
+		fprintf(stderr, "While connecting to %s: %s\n", URL->host, tls_error(conn->tls));
 		return (-1);
 	}
 
-	conn->ssl_cert = SSL_get_peer_certificate(conn->ssl);
-	if (!conn->ssl_cert) {
-		fprintf(stderr, "No server SSL certificate\n");
-		return -1;
-	}
-
-	if (getenv("SSL_NO_VERIFY_HOSTNAME") == NULL) {
-		if (verbose)
-			fetch_info("Verify hostname");
-		if (X509_check_host(conn->ssl_cert, URL->host, strlen(URL->host),
-				X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS,
-				NULL) != 1) {
-			fprintf(stderr, "SSL certificate subject doesn't match host %s\n",
-				URL->host);
-			return -1;
-		}
-	}
-
+#if 0
 	if (verbose) {
 		X509_NAME *name;
 		char *str;
@@ -563,6 +547,7 @@ fetch_ssl(conn_t *conn, const struct url *URL, int verbose)
 		fetch_info("Certificate issuer: %s", str);
 		free(str);
 	}
+#endif
 
 	return (0);
 }
@@ -629,14 +614,14 @@ fetch_read(conn_t *conn, char *buf, size_t len)
 			} while (pfd.revents == 0);
 		}
 
-		if (conn->ssl != NULL) {
-			rlen = SSL_read(conn->ssl, buf, len);
-			if (rlen == -1) {
-				switch (SSL_get_error(conn->ssl, rlen)) {
-				case SSL_ERROR_WANT_READ:
+		if (conn->tls != NULL) {
+			rlen = tls_read(conn->tls, buf, len);
+			if (rlen < 0) {
+				switch (rlen) {
+				case TLS_WANT_POLLIN:
 					conn->buf_events = POLLIN;
 					break;
-				case SSL_ERROR_WANT_WRITE:
+				case TLS_WANT_POLLOUT:
 					conn->buf_events = POLLOUT;
 					break;
 				default:
@@ -769,8 +754,8 @@ fetch_write(conn_t *conn, const void *buf, size_t len)
 			}
 		}
 		errno = 0;
-		if (conn->ssl != NULL)
-			wlen = SSL_write(conn->ssl, buf, len);
+		if (conn->tls != NULL)
+			wlen = tls_write(conn->tls, buf, len);
 		else
 			wlen = send(conn->sd, buf, len, MSG_NOSIGNAL);
 		if (wlen == 0) {
@@ -800,16 +785,12 @@ fetch_close(conn_t *conn)
 {
 	int ret;
 
-	if (conn->ssl) {
-		SSL_shutdown(conn->ssl);
-		SSL_set_connect_state(conn->ssl);
-		SSL_free(conn->ssl);
+	if (conn->tls != NULL) {
+		tls_close(conn->tls);
+		tls_free(conn->tls);
 	}
-	if (conn->ssl_ctx) {
-		SSL_CTX_free(conn->ssl_ctx);
-	}
-	if (conn->ssl_cert) {
-		X509_free(conn->ssl_cert);
+	if (conn->tls_config != NULL) {
+		tls_config_free(conn->tls_config);
 	}
 
 	ret = close(conn->sd);
