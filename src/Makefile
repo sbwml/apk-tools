@@ -9,6 +9,9 @@ else
 $(error Lua interpreter not found. Please specify LUA interpreter, or use LUA=no to build without help.)
 endif
 
+LIBTLS_CFLAGS		:= $(shell $(PKG_CONFIG) --cflags libtls)
+LIBTLS_LIBS		:= $(shell $(PKG_CONFIG) --libs libtls)
+
 OPENSSL_CFLAGS		:= $(shell $(PKG_CONFIG) --cflags openssl)
 OPENSSL_LIBS		:= $(shell $(PKG_CONFIG) --libs openssl)
 
@@ -90,9 +93,9 @@ LIBS_apk.static		:= -Wl,--as-needed -ldl -Wl,--no-as-needed
 LDFLAGS_apk		+= -L$(obj)
 LDFLAGS_apk-test	+= -L$(obj)
 
-CFLAGS_ALL		+= $(OPENSSL_CFLAGS) $(ZLIB_CFLAGS)
+CFLAGS_ALL		+= $(LIBTLS_CFLAGS) $(OPENSSL_CFLAGS) $(ZLIB_CFLAGS)
 LIBS			:= -Wl,--as-needed \
-				$(OPENSSL_LIBS) $(ZLIB_LIBS) \
+				$(LIBTLS_LIBS) $(OPENSSL_LIBS) $(ZLIB_LIBS) \
 			   -Wl,--no-as-needed
 
 # Help generation
