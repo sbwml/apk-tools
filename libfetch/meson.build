@@ -3,8 +3,7 @@ libfetch_src = [
 	'fetch.c',
 	'file.c',
 	'ftp.c',
-	'http.c',
-	'openssl-compat.c'
+	'http.c'
 ]
 
 errlist_generator = find_program('./errlist.sh')

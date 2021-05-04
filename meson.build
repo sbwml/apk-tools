@@ -17,9 +17,11 @@ scdoc_dep = dependency('scdoc', version: '>=1.10', required: get_option('docs'))
 shared_deps = [
 	dependency('zlib'),
 	dependency('openssl'),
+	dependency('libtls'),
 ]
 
 static_deps = [
+	dependency('libtls', static: true),
 	dependency('openssl', static: true),
 	dependency('zlib', static: true),
 ]
