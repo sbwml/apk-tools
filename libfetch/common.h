@@ -39,7 +39,6 @@
 #define HTTP_DEFAULT_PROXY_PORT	3128
 
 #include <tls.h>
-#include "openssl-compat.h"
 
 #if defined(__GNUC__) && __GNUC__ >= 3
 #define LIBFETCH_PRINTFLIKE(fmtarg, firstvararg)	\
