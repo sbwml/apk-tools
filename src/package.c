@@ -948,6 +948,10 @@ int apk_pkg_write_index_entry(struct apk_package *info,
 		apk_blob_push_blob(&bbuf, APK_BLOB_STR("\nk:"));
 		apk_blob_push_uint(&bbuf, info->provider_priority, 10);
 	}
+	if (info->filename) {
+		apk_blob_push_blob(&bbuf, APK_BLOB_STR("\nn:"));
+		apk_blob_push_blob(&bbuf, APK_BLOB_STR(basename(info->filename)));
+	}
 	apk_blob_push_blob(&bbuf, APK_BLOB_STR("\n"));
 
 	if (APK_BLOB_IS_NULL(bbuf))
