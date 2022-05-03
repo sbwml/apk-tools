@@ -71,6 +71,7 @@ unsigned int adb_pkg_field_index(char f)
 		MAP('c', ADBI_PI_REPO_COMMIT),
 		MAP('r', ADBI_PI_REPLACES),
 		MAP('k', ADBI_PI_PRIORITY),
+		MAP('n', ADBI_PI_FILE_NAME),
 	};
 	if (f < 'A' || f-'A' >= ARRAY_SIZE(map)) return 0;
 	return map[(unsigned char)f - 'A'];
@@ -403,6 +404,7 @@ const struct adb_object_schema schema_pkginfo = {
 		ADB_FIELD(ADBI_PI_INSTALL_IF,	"install-if",	schema_dependency_array),
 		ADB_FIELD(ADBI_PI_RECOMMENDS,	"recommends",	schema_dependency_array),
 		ADB_FIELD(ADBI_PI_LAYER,	"layer",	scalar_int),
+		ADB_FIELD(ADBI_PI_FILE_NAME,	"file-name",	scalar_string),
 	},
 };
 
