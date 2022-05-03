@@ -278,6 +278,7 @@ static int mkndx_main(void *pctx, struct apk_ctx *ac, struct apk_string_array *a
 			if (csum.type != APK_CHECKSUM_NONE)
 				adb_wo_blob(&ctx->pkginfo, ADBI_PI_UNIQUE_ID,
 					APK_BLOB_CSUM(csum));
+			adb_wo_blob(&ctx->pkginfo, ADBI_PI_FILE_NAME, APK_BLOB_STR(basename(*parg)));
 
 			val = adb_wa_append_obj(&ctx->pkgs, &ctx->pkginfo);
 			newpkgs++;
