@@ -587,6 +587,40 @@ int apk_repo_format_cache_index(apk_blob_t to, struct apk_repository *repo)
 	return 0;
 }
 
+static int format_index_relative_url(apk_blob_t index_uri, struct apk_package *pkg,
+				     char *buf, size_t len)
+{
+	apk_blob_t base_uri;
+
+	if (pkg == NULL)
+		return snprintf(buf, len, BLOB_FMT, BLOB_PRINTF(index_uri));
+
+	apk_blob_rsplit(index_uri, '/', &base_uri, NULL);
+
+	if (pkg->remote_filename != NULL)
+		return snprintf(buf, len, BLOB_FMT "/%s", BLOB_PRINTF(base_uri),
+				pkg->remote_filename);
+
+	return snprintf(buf, len, BLOB_FMT "/" PKG_FILE_FMT, BLOB_PRINTF(base_uri),
+			PKG_FILE_PRINTF(pkg));
+}
+
+static int format_apkindex_url(apk_blob_t to, apk_blob_t base_uri, apk_blob_t arch)
+{
+	while (base_uri.len && base_uri.ptr[base_uri.len-1] == '/') base_uri.len--;
+
+	apk_blob_push_blob(&to, base_uri);
+	apk_blob_push_blob(&to, APK_BLOB_STR("/"));
+	apk_blob_push_blob(&to, arch);
+	apk_blob_push_blob(&to, APK_BLOB_STR("/"));
+	apk_blob_push_blob(&to, APK_BLOB_STR(apkindex_tar_gz));
+
+	if (APK_BLOB_IS_NULL(to))
+		return -ENOBUFS;
+
+	return 0;
+}
+
 int apk_repo_format_real_url(apk_blob_t *default_arch, struct apk_repository *repo,
 			     struct apk_package *pkg, char *buf, size_t len,
 			     struct apk_url_print *urlp)
@@ -599,20 +633,17 @@ int apk_repo_format_real_url(apk_blob_t *default_arch, struct apk_repository *re
 	if (pkg && pkg->arch) arch = *pkg->arch;
 	else arch = *default_arch;
 
-	/* a package is never an index, and therefore never ends with .adb */
-	if (pkg == NULL && apk_blob_ends_with(uri, APK_BLOB_STR(".adb")))
-		r = snprintf(buf, len, BLOB_FMT, BLOB_PRINTF(uri));
+	if (apk_blob_ends_with(uri, APK_BLOB_STR(".adb")))
+		r = format_index_relative_url(uri, pkg, buf, len);
 	else {
-		while (uri.len && uri.ptr[uri.len-1] == '/') uri.len--;
-		if (pkg != NULL && pkg->remote_filename != NULL)
-			r = snprintf(buf, len, BLOB_FMT "/" BLOB_FMT "/%s",
-				BLOB_PRINTF(uri), BLOB_PRINTF(arch), pkg->remote_filename);
-		else if (pkg != NULL)
-			r = snprintf(buf, len, BLOB_FMT "/" BLOB_FMT "/" PKG_FILE_FMT,
-				BLOB_PRINTF(uri), BLOB_PRINTF(arch), PKG_FILE_PRINTF(pkg));
-		else
-			r = snprintf(buf, len, BLOB_FMT "/" BLOB_FMT "/%s",
-				BLOB_PRINTF(uri), BLOB_PRINTF(arch), apkindex_tar_gz);
+		char index_uri_buf[PATH_MAX] = "";
+		apk_blob_t index_uri = APK_BLOB_BUF(index_uri_buf);
+
+		r = format_apkindex_url(index_uri, uri, arch);
+		if (r < 0)
+			return r;
+
+		r = format_index_relative_url(index_uri, pkg, buf, len);
 	}
 
 	if (r >= len)
