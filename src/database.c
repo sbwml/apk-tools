@@ -599,15 +599,10 @@ int apk_repo_format_real_url(apk_blob_t *default_arch, struct apk_repository *re
 	if (pkg && pkg->arch) arch = *pkg->arch;
 	else arch = *default_arch;
 
-	if (apk_blob_ends_with(uri, APK_BLOB_STR(".adb"))) {
-		if (pkg != NULL) {
-			apk_blob_rsplit(uri, '/', &uri, NULL);
-			r = snprintf(buf, len, BLOB_FMT "/" PKG_FILE_FMT,
-				BLOB_PRINTF(uri), PKG_FILE_PRINTF(pkg));
-		} else {
-			r = snprintf(buf, len, BLOB_FMT, BLOB_PRINTF(uri));
-		}
-	} else {
+	/* a package is never an index, and therefore never ends with .adb */
+	if (pkg == NULL && apk_blob_ends_with(uri, APK_BLOB_STR(".adb")))
+		r = snprintf(buf, len, BLOB_FMT, BLOB_PRINTF(uri));
+	else {
 		while (uri.len && uri.ptr[uri.len-1] == '/') uri.len--;
 		if (pkg != NULL && pkg->remote_filename != NULL)
 			r = snprintf(buf, len, BLOB_FMT "/" BLOB_FMT "/%s",
