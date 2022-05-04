@@ -563,6 +563,9 @@ int apk_pkg_add_info(struct apk_database *db, struct apk_package *pkg,
 	case 'k':
 		pkg->provider_priority = apk_blob_pull_uint(&value, 10);
 		break;
+	case 'n':
+		pkg->remote_filename = apk_blob_cstr(value);
+		break;
 	case 'F': case 'M': case 'R': case 'Z': case 'r': case 'q':
 	case 'a': case 's': case 'f':
 		/* installed db entries which are handled in database.c */
@@ -615,6 +618,7 @@ void apk_pkg_from_adb(struct apk_database *db, struct apk_package *pkg, struct a
 	pkg->build_time = adb_ro_int(pkginfo, ADBI_PI_BUILD_TIME);
 	pkg->commit = commit_id(adb_ro_blob(pkginfo, ADBI_PI_REPO_COMMIT));
 	pkg->layer = adb_ro_int(pkginfo, ADBI_PI_LAYER);
+	pkg->remote_filename = apk_blob_cstr(adb_ro_blob(pkginfo, ADBI_PI_FILE_NAME));
 
 	apk_deps_from_adb(&pkg->depends, db, adb_ro_obj(pkginfo, ADBI_PI_DEPENDS, &obj));
 	apk_deps_from_adb(&pkg->provides, db, adb_ro_obj(pkginfo, ADBI_PI_PROVIDES, &obj));

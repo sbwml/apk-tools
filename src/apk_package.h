@@ -86,6 +86,7 @@ struct apk_package {
 	apk_blob_t *origin, *maintainer;
 	char *url, *description, *commit;
 	char *filename;
+	char *remote_filename;
 	struct apk_dependency_array *depends, *install_if, *provides;
 	size_t installed_size, size;
 	time_t build_time;
