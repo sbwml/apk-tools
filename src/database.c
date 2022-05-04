@@ -609,7 +609,10 @@ int apk_repo_format_real_url(apk_blob_t *default_arch, struct apk_repository *re
 		}
 	} else {
 		while (uri.len && uri.ptr[uri.len-1] == '/') uri.len--;
-		if (pkg != NULL)
+		if (pkg != NULL && pkg->remote_filename != NULL)
+			r = snprintf(buf, len, BLOB_FMT "/" BLOB_FMT "/%s",
+				BLOB_PRINTF(uri), BLOB_PRINTF(arch), pkg->remote_filename);
+		else if (pkg != NULL)
 			r = snprintf(buf, len, BLOB_FMT "/" BLOB_FMT "/" PKG_FILE_FMT,
 				BLOB_PRINTF(uri), BLOB_PRINTF(arch), PKG_FILE_PRINTF(pkg));
 		else
