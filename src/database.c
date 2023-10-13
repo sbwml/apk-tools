@@ -480,6 +480,7 @@ static struct apk_db_file *apk_db_file_new(struct apk_db_dir_instance *diri,
 		return NULL;
 
 	memset(file, 0, sizeof(*file));
+	file->rooted_name[0] = '/';
 	memcpy(file->name, name.ptr, name.len);
 	file->name[name.len] = 0;
 	file->namelen = name.len;
@@ -1977,7 +1978,7 @@ int apk_db_get_tag_id(struct apk_database *db, apk_blob_t tag)
 	return i;
 }
 
-static int fire_triggers(apk_hash_item item, void *ctx)
+static int fire_dir_triggers(apk_hash_item item, void *ctx)
 {
 	struct apk_database *db = (struct apk_database *) ctx;
 	struct apk_db_dir *dbd = (struct apk_db_dir *) item;
@@ -2011,9 +2012,44 @@ static int fire_triggers(apk_hash_item item, void *ctx)
 	return 0;
 }
 
+static int fire_file_triggers(apk_hash_item item, void *ctx)
+{
+	struct apk_database *db = (struct apk_database *) ctx;
+	struct apk_db_file *dbf = (struct apk_db_file *) item;
+	struct apk_installed_package *ipkg;
+	int i;
+
+	list_for_each_entry(ipkg, &db->installed.triggers, trigger_pkgs_list) {
+		if (!ipkg->run_all_triggers && !dbf->modified)
+			continue;
+
+		for (i = 0; i < ipkg->triggers->num; i++) {
+			if (ipkg->triggers->item[i][0] != '/')
+				continue;
+
+			if (fnmatch(ipkg->triggers->item[i], dbf->rooted_name,
+				    FNM_PATHNAME) != 0)
+				continue;
+
+			/* And place holder for script name */
+			if (ipkg->pending_triggers->num == 0) {
+				*apk_string_array_add(&ipkg->pending_triggers) =
+					NULL;
+				db->pending_triggers++;
+			}
+			*apk_string_array_add(&ipkg->pending_triggers) =
+				dbf->rooted_name;
+			break;
+		}
+	}
+
+	return 0;
+}
+
 int apk_db_fire_triggers(struct apk_database *db)
 {
-	apk_hash_foreach(&db->installed.dirs, fire_triggers, db);
+	apk_hash_foreach(&db->installed.dirs, fire_dir_triggers, db);
+	apk_hash_foreach(&db->installed.files, fire_file_triggers, db);
 	return db->pending_triggers;
 }
 
@@ -2832,6 +2868,8 @@ static void apk_db_purge_pkg(struct apk_database *db,
 		apk_fsdir_get(&d, dirname, db->ctx, apk_pkg_ctx(ipkg->pkg));
 
 		hlist_for_each_entry_safe(file, fc, fn, &diri->owned_files, diri_files_list) {
+			if (is_installed) file->modified = 1;
+
 			key = (struct apk_db_file_hash_key) {
 				.dirname = dirname,
 				.filename = APK_BLOB_PTR_LEN(file->name, file->namelen),
@@ -2886,6 +2924,7 @@ static uint8_t apk_db_migrate_files_for_priority(struct apk_database *db,
 
 		dir->modified = 1;
 		hlist_for_each_entry_safe(file, fc, fn, &diri->owned_files, diri_files_list) {
+			file->modified = 1;
 			key = (struct apk_db_file_hash_key) {
 				.dirname = dirname,
 				.filename = APK_BLOB_PTR_LEN(file->name, file->namelen),
