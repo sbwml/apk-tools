@@ -26,7 +26,7 @@ $(repos):
 	@rm -f repos.out
 	@cd $@ &&\
 		for i in */APKBUILD; do \
-			( cd $${i%/*} && REPODEST="$$PWD/../.." abuild -R ) \
+			( cd $${i%/*} && REPODEST="$$PWD/../.." abuild -r ) \
 				>> ../repos.out 2>&1 || { cat ../repos.out >&2; exit 1; } \
 		done
 
