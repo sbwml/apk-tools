@@ -102,11 +102,13 @@ APK_ARRAY(apk_package_array, struct apk_package *);
 #define APK_PROVIDER_FROM_PACKAGE(pkg)	  (struct apk_provider){(pkg),(pkg)->version}
 #define APK_PROVIDER_FROM_PROVIDES(pkg,p) (struct apk_provider){(pkg),(p)->version}
 
-#define PKG_VER_FMT		"%s-" BLOB_FMT
+#define PKG_VER_FMT		"%s=" BLOB_FMT
 #define PKG_VER_PRINTF(pkg)	(pkg)->name->name, BLOB_PRINTF(*(pkg)->version)
 #define PKG_VER_STRLEN(pkg)	(strlen(pkg->name->name) + 1 + pkg->version->len)
-#define PKG_FILE_FMT		PKG_VER_FMT ".apk"
-#define PKG_FILE_PRINTF(pkg)	PKG_VER_PRINTF(pkg)
+#define PKG_VER_DASH_FMT		"%s-" BLOB_FMT
+#define PKG_VER_DASH_PRINTF(pkg)	(pkg)->name->name, BLOB_PRINTF(*(pkg)->version)
+#define PKG_FILE_FMT		PKG_VER_DASH_FMT ".apk"
+#define PKG_FILE_PRINTF(pkg)	PKG_VER_DASH_PRINTF(pkg)
 
 extern const char *apk_script_types[];
 

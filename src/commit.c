@@ -489,7 +489,7 @@ static void print_conflicts(struct print_state *ps, struct apk_package *pkg)
 		if (p->pkg == pkg || !p->pkg->marked)
 			continue;
 		label_start(ps, "conflicts:");
-		apk_print_indented_fmt(&ps->i, PKG_VER_FMT, PKG_VER_PRINTF(p->pkg));
+		apk_print_indented_fmt(&ps->i, PKG_VER_DASH_FMT, PKG_VER_DASH_PRINTF(p->pkg));
 	}
 	foreach_array_item(d, pkg->provides) {
 		once = 1;
@@ -506,8 +506,8 @@ static void print_conflicts(struct print_state *ps, struct apk_package *pkg)
 			}
 			label_start(ps, "conflicts:");
 			apk_print_indented_fmt(
-				&ps->i, PKG_VER_FMT "[%s]",
-				PKG_VER_PRINTF(p->pkg),
+				&ps->i, PKG_VER_DASH_FMT "[%s]",
+				PKG_VER_DASH_PRINTF(p->pkg),
 				apk_dep_snprintf(tmp, sizeof(tmp), d));
 		}
 	}
@@ -524,8 +524,8 @@ static void print_dep(struct apk_package *pkg0, struct apk_dependency *d0, struc
 	if (pkg0 == NULL)
 		apk_print_indented_fmt(&ps->i, "world[%s]", apk_dep_snprintf(tmp, sizeof(tmp), d0));
 	else
-		apk_print_indented_fmt(&ps->i, PKG_VER_FMT "[%s]",
-				       PKG_VER_PRINTF(pkg0),
+		apk_print_indented_fmt(&ps->i, PKG_VER_DASH_FMT "[%s]",
+				       PKG_VER_DASH_PRINTF(pkg0),
 				       apk_dep_snprintf(tmp, sizeof(tmp), d0));
 }
 
@@ -555,7 +555,7 @@ static void analyze_package(struct print_state *ps, struct apk_package *pkg, uns
 {
 	char pkgtext[256];
 
-	snprintf(pkgtext, sizeof(pkgtext), PKG_VER_FMT, PKG_VER_PRINTF(pkg));
+	snprintf(pkgtext, sizeof(pkgtext), PKG_VER_DASH_FMT, PKG_VER_DASH_PRINTF(pkg));
 	ps->label = pkgtext;
 
 	if (pkg->uninstallable) {
@@ -603,7 +603,7 @@ static void analyze_missing_name(struct print_state *ps, struct apk_name *name)
 				name0->state_int &= ~STATE_COUNT_MASK;
 			} else if (refs > 0) {
 				/* individual package */
-				apk_print_indented_fmt(&ps->i, PKG_VER_FMT, PKG_VER_PRINTF(p0->pkg));
+				apk_print_indented_fmt(&ps->i, PKG_VER_DASH_FMT, PKG_VER_DASH_PRINTF(p0->pkg));
 				name0->state_int--;
 			}
 		}
@@ -633,8 +633,8 @@ static void analyze_missing_name(struct print_state *ps, struct apk_name *name)
 				if (d0->name != name || apk_dep_conflict(d0))
 					continue;
 				apk_print_indented_fmt(&ps->i,
-					PKG_VER_FMT "[%s]",
-					PKG_VER_PRINTF(p0->pkg),
+					PKG_VER_DASH_FMT "[%s]",
+					PKG_VER_DASH_PRINTF(p0->pkg),
 					apk_dep_snprintf(tmp, sizeof(tmp), d0));
 				break;
 			}
