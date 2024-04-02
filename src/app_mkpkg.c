@@ -23,8 +23,6 @@
 #include "apk_print.h"
 #include "apk_xattr.h"
 
-#define BLOCK_SIZE 4096
-
 struct mkpkg_ctx {
 	struct apk_ctx *ac;
 	const char *files_dir, *output;
@@ -237,7 +235,7 @@ static int mkpkg_process_dirent(void *pctx, int dirfd, const char *entry)
 
 	switch (fi.mode & S_IFMT) {
 	case S_IFREG:
-		ctx->installed_size += (fi.size + BLOCK_SIZE - 1) & ~(BLOCK_SIZE-1);
+		ctx->installed_size += fi.size;
 		break;
 	case S_IFBLK:
 	case S_IFCHR:
@@ -370,7 +368,7 @@ static int mkpkg_main(void *pctx, struct apk_ctx *ac, struct apk_string_array *a
 		}
 		r = mkpkg_process_directory(ctx, openat(AT_FDCWD, ctx->files_dir, O_RDONLY), &fi);
 		if (r) goto err;
-		if (!ctx->installed_size) ctx->installed_size = BLOCK_SIZE;
+		if (!ctx->installed_size) ctx->installed_size = 1;
 	}
 
 	adb_wo_int(&pkgi, ADBI_PI_INSTALLED_SIZE, ctx->installed_size);
