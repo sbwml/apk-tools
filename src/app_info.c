@@ -241,7 +241,7 @@ static void info_print_required_by(struct apk_database *db, struct apk_package *
 		printf("%s: ", pkg->name->name);
 	apk_pkg_foreach_reverse_dependency(
 		pkg,
-		APK_FOREACH_INSTALLED | APK_DEP_SATISFIES | apk_foreach_genid(),
+		APK_DEP_SATISFIES | apk_foreach_genid(),
 		print_rdep_pkg, NULL);
 }
 
@@ -343,7 +343,7 @@ static void info_subaction(struct info_ctx *ctx, struct apk_package *pkg)
 		info_print_license,
 	};
 	const int requireipkg =
-		APK_INFO_CONTENTS | APK_INFO_TRIGGERS | APK_INFO_RDEPENDS |
+		APK_INFO_CONTENTS | APK_INFO_TRIGGERS |
 		APK_INFO_RINSTALL_IF | APK_INFO_REPLACES;
 	int i;
 
