@@ -325,7 +325,7 @@ static void info_print_replaces(struct apk_database *db, struct apk_package *pkg
 	info_print_dep_array(db, pkg, pkg->ipkg->replaces, "replaces");
 }
 
-static void info_subaction(struct info_ctx *ctx, struct apk_package *pkg)
+static int info_subaction(struct info_ctx *ctx, struct apk_package *pkg)
 {
 	typedef void (*subaction_t)(struct apk_database *, struct apk_package *);
 	static subaction_t subactions[] = {
@@ -352,11 +352,13 @@ static void info_subaction(struct info_ctx *ctx, struct apk_package *pkg)
 			continue;
 
 		if (pkg->ipkg == NULL && (BIT(i) & requireipkg))
-			continue;
+			return 1;
 
 		subactions[i](ctx->db, pkg);
 		puts("");
 	}
+
+	return 0;
 }
 
 static int print_name_info(struct apk_database *db, const char *match, struct apk_package *pkg, void *pctx)
@@ -368,8 +370,7 @@ static int print_name_info(struct apk_database *db, const char *match, struct ap
 		return 0;
 	}
 
-	info_subaction(ctx, pkg);
-	return 0;
+	return info_subaction(ctx, pkg);
 }
 
 #define INFO_OPTIONS(OPT) \
@@ -464,7 +465,7 @@ static int info_main(void *ctx, struct apk_ctx *ac, struct apk_string_array *arg
 		ictx->action(ictx, db, args);
 	} else if (args->num > 0) {
 		/* Print info on given packages */
-		apk_db_foreach_sorted_providers(db, args, print_name_info, ctx);
+		return apk_db_foreach_sorted_providers(db, args, print_name_info, ctx);
 	} else {
 		/* Print all installed packages */
 		struct apk_package_array *pkgs = apk_db_sorted_installed_packages(db);
