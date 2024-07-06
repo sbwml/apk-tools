@@ -2617,6 +2617,202 @@ static int apk_db_install_script(struct apk_extract_ctx *ectx, unsigned int type
 	return 0;
 }
 
+/*
+ * We only support "full" usrmerge where /usr/sbin is also a symlink to /bin.
+ */
+int is_usrmerge_system(struct apk_database *db)
+{
+	struct stat st;
+	int r;
+	static int is_usrmerge = -1;
+
+	if (is_usrmerge != -1)
+		return is_usrmerge;
+
+	r = openat(db->root_fd, "/bin", O_PATH | O_NOFOLLOW);
+	if (r < 0)
+		goto err;
+
+	if (fstat(r, &st))
+		goto err;
+
+	is_usrmerge = S_ISLNK(st.st_mode);
+	goto done;
+
+ err:
+	printf("Failed to determine if system is usrmerge: %s\n", strerror(errno));
+	is_usrmerge = 0;
+ done:
+	return is_usrmerge;
+}
+
+struct usrmerge_path {
+	const char *path;
+	int skip_rewrite;
+};
+
+/* Paths that relate to the /usr merge */
+const struct usrmerge_path *get_usrmerge_path(const char *path)
+{
+	static const struct usrmerge_path usrmerge_paths[] = {
+		{
+			.path = "bin/",
+		}, {
+			.path = "sbin/",
+		}, {
+			.path = "lib/",
+		}, {
+			.path = "lib64/",
+		}, {
+			.path = "usr/sbin/",
+		}, {
+			.path = "usr/bin/",
+			.skip_rewrite = 1,
+		}, {
+			.path = "usr/lib/",
+			.skip_rewrite = 1,
+		}
+	};
+
+	if (!path)
+		return NULL;
+
+	if (*path == '/')
+		path++;
+
+	for (int i = 0; i < ARRAY_SIZE(usrmerge_paths); i++) {
+		if (!strncmp(path, usrmerge_paths[i].path, strlen(usrmerge_paths[i].path)))
+			return &usrmerge_paths[i];
+	}
+
+	return NULL;
+}
+
+static void rewrite_path(const struct usrmerge_path *umpath, const char *path, char *out, size_t out_size)
+{
+	const char *p = path;
+
+	if (*p == '/')
+		p++;
+
+	if (strcmp(umpath->path, "usr/sbin/") == 0 || strcmp(umpath->path, "sbin/") == 0) {
+		p += strlen(umpath->path);
+		/* Rewrite it relative to /usr/bin instead */
+		snprintf(out, out_size, "usr/bin/%s", p);
+	} else {
+		snprintf(out, out_size, "usr/%s", p);
+	}
+}
+
+/*
+ * Rewrite name to be /usr merge compliant, returns 1 if ae is a redundant symlink on /usr merge systems
+ * e.g if it would be a link to itself
+ */
+static int apk_db_rewrite_usrmerge_path(struct apk_extract_ctx *ectx, struct apk_file_info *fi,
+					char *namep, char *linkp)
+{
+	struct install_ctx *ctx = container_of(ectx, struct install_ctx, ectx);
+	struct apk_database *db = ctx->db;
+	struct apk_out *out = &db->ctx->out;
+	struct apk_package *pkg = ctx->pkg;
+	const char *p;
+	const struct usrmerge_path *umpath, *link_umpath;
+
+	if (!is_usrmerge_system(db))
+		return 0;
+
+	umpath = get_usrmerge_path(fi->name);
+	link_umpath = get_usrmerge_path(fi->link_target);
+	/* This file isn't in a /usr merge affected dir */
+	if (!umpath && !link_umpath)
+		return 0;
+
+	/*
+	 * If a package contains the literal /usr merge symlinks (/bin -> /usr/bin, etc) then leave
+	 * it be so the rootfs is created properly.
+	 */
+	if (S_ISLNK(fi->mode) && umpath && !umpath->skip_rewrite && strcmp(fi->name, umpath->path) == 0)
+		return 0;
+
+	/* Rewrite absolute symlinks */
+	if (link_umpath && !link_umpath->skip_rewrite) {
+		p = linkp;
+		if (fi->link_target[0] == '/') {
+			linkp[0] = '/';
+			p++;
+		}
+		rewrite_path(link_umpath, fi->link_target, (char *)p, 510);
+
+		apk_msg(out, PKG_VER_FMT": [USRMERGE] Rewrite symlink %s to %s",
+			PKG_VER_PRINTF(pkg), fi->link_target, linkp);
+		fi->link_target = linkp;
+	}
+
+	/* Rewrite paths */
+	if (umpath && !umpath->skip_rewrite) {
+		rewrite_path(umpath, fi->name, namep, 512);
+
+		apk_msg(out, PKG_VER_FMT": [USRMERGE] Rewrite %s to %s",
+			PKG_VER_PRINTF(pkg), fi->name, namep);
+		fi->name = namep;
+	}
+
+	/*
+	 * Handle relative symlinks. We need to adjust behaviour based on if the symlink "touches"
+	 * /usr or not. e.g. if it's deep in /lib/firmware or /usr/share, it's unaffected. But if
+	 * it crosses from /bin to /usr/bin for example then it will need to be adjusted.
+	 *
+	 * We first partially resolve the symlink and then optimise it. Let's take the case of:
+	 *   /bin/modinfo -> ../usr/bin/kmod
+	 * Above we already rewrote the path to /usr/bin/modinfo, so now we need to fixup the
+	 * symlink by prefixing another '../'. At this point it's:
+	 *   /usr/bin/modinfo -> ../../usr/bin/kmod
+	 * Obviously this is more simply expressed now as:
+	 *   /usr/bin/modinfo -> kmod
+	 *
+	 * This makes it easy to then catch symlinks like:
+	 *   /sbin/modinfo -> ../bin/modinfo
+	 * Since it gets rewritten to:
+	 *   /usr/sbin/modinfo -> modinfo
+	 * So down below we detect that it's a symlink to itself and skip it.
+	 */
+	if (S_ISLNK(fi->mode) && !link_umpath) {
+		int elems = 0;
+		p = fi->name;
+		for (; *p; p++) if (*p == '/') elems++;
+
+		/* This doesn't make sense to do for relative links deeper than /usr/lib/ */
+		if (elems < 3) {
+			if (umpath->path[0] != 'u' && strncmp(fi->link_target, "../", 3) == 0) {
+				strncat(linkp, "../", 512);
+			}
+			strncat(linkp, fi->link_target, 512);
+			fi->link_target = linkp;
+
+			if ((!strncmp("usr/bin", fi->name, 7) && !strncmp("../../usr/bin", fi->link_target, 13)) ||
+			    (!strncmp("usr/lib", fi->name, 7) && !strncmp("../../usr/lib", fi->link_target, 13)) ||
+			    (!strncmp("usr/bin", fi->name, 7) && !strncmp("../../bin", fi->link_target, 9)) ||
+			    (!strncmp("usr/lib", fi->name, 7) && !strncmp("../../lib", fi->link_target, 9))) {
+				fi->link_target = basename(linkp);
+			}
+		}
+	}
+
+	/*
+	 * Detect recursive / redundant symlinks that just link to themselves now. This handles both absolute symlinks and
+	 * most relative ones.
+	 */
+	p = strrchr(fi->name, '/') + 1;
+	if (fi->link_target && (strcmp(fi->link_target[0] == '/' ? fi->link_target + 1 : fi->link_target, fi->name) == 0 ||
+		strcmp(fi->link_target, p) == 0)) {
+		apk_msg(out, PKG_VER_FMT": [USRMERGE] ignoring redundant symlink %s -> %s",
+			PKG_VER_PRINTF(pkg), fi->name, fi->link_target);
+		return 1;
+	}
+
+	return 0;
+}
+
 static int apk_db_install_file(struct apk_extract_ctx *ectx, const struct apk_file_info *ae, struct apk_istream *is)
 {
 	struct install_ctx *ctx = container_of(ectx, struct install_ctx, ectx);
@@ -2626,10 +2822,19 @@ static int apk_db_install_file(struct apk_extract_ctx *ectx, const struct apk_fi
 	struct apk_out *out = &ac->out;
 	struct apk_package *pkg = ctx->pkg, *opkg;
 	struct apk_installed_package *ipkg = pkg->ipkg;
-	apk_blob_t name = APK_BLOB_STR(ae->name), bdir, bfile;
+	char namep[512] = {0}, linkp[512] = {0};
+	apk_blob_t name, bdir, bfile;
 	struct apk_db_dir_instance *diri = ctx->diri;
 	struct apk_db_file *file, *link_target_file = NULL;
+	struct apk_file_info fi;
 	int ret = 0, r;
+
+	/*
+	 * We may need to rewrite some paths for the /usr merge, copy the file info so we can
+	 * modify it here.
+	 */
+	fi = *ae;
+	ae = &fi;
 
 	apk_db_run_pending_script(ctx);
 	if (ae->name[0] == '.') return 0;
@@ -2644,6 +2849,12 @@ static int apk_db_install_file(struct apk_extract_ctx *ectx, const struct apk_fi
 		ipkg->broken_files = 1;
 		return 0;
 	}
+
+	/* Rewrite paths and detect redundant symlinks */
+	if (apk_db_rewrite_usrmerge_path(ectx, &fi, namep, linkp))
+		return 0;
+
+	name = APK_BLOB_STR(ae->name);
 
 	/* Installable entry */
 	ctx->current_file_size = apk_calc_installed_size(ae->size);
