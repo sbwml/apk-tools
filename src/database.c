@@ -2634,6 +2634,9 @@ static int apk_db_install_file(struct apk_extract_ctx *ectx, const struct apk_fi
 	apk_db_run_pending_script(ctx);
 	if (ae->name[0] == '.') return 0;
 
+	if (db->usermode && (ae->mode & (S_IFCHR | S_IFBLK)))
+		return 0;
+
 	/* Sanity check the file name */
 	if (ae->name[0] == '/' || contains_control_character(ae->name) ||
 	    strncmp(ae->name, &dot1[1], 2) == 0 ||
