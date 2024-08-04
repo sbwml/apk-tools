@@ -106,8 +106,10 @@ static inline int IS_ERR(const void *ptr) { return (unsigned long)ptr >= (unsign
 /* default architecture for APK packages. */
 #if defined(__x86_64__)
 #define APK_DEFAULT_BASE_ARCH        "x86_64"
-#elif defined(__i386__)
+#elif defined(__i386__) && defined(__SSE2__)
 #define APK_DEFAULT_BASE_ARCH        "x86"
+#elif defined(__i386__)
+#define APK_DEFAULT_BASE_ARCH        "i486"
 #elif defined(__powerpc__) && !defined(__powerpc64__)
 #define APK_DEFAULT_BASE_ARCH	"ppc"
 #elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
