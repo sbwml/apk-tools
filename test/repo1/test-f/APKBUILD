@@ -1,0 +1,37 @@
+# Contributor:
+# Maintainer:
+pkgname=test-f
+pkgver=1.0
+pkgrel=0
+pkgdesc="Package E for apk-tools testsuite - package that causes trigger"
+url="http://alpinelinux.org"
+arch="noarch"
+license="GPL"
+depends=
+makedepends=
+subpackages=
+source=""
+builddir="$srcdir/$pkgname-$pkgver"
+
+# append extra dependencies to -dev subpackage
+# remove if not used.
+# depends_dev="somepackage-dev"
+
+prepare() {
+	mkdir -p "$builddir"
+}
+
+build() {
+	cd "$builddir"
+	cat > $pkgname <<-EOF
+		#!/bin/sh
+		echo "hello from $pkgname-$pkgver"
+	EOF
+}
+
+package() {
+	cd "$builddir"
+	install -Dm755 $pkgname "$pkgdir"/file-trigger
+}
+
+sha512sums="" #generate with 'abuild checksum'

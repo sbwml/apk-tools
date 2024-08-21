@@ -38,8 +38,10 @@ struct apk_db_file {
 	struct apk_db_acl *acl;
 
 	unsigned short audited : 1;
+	unsigned modified : 1;
 	unsigned short namelen : 15;
 	struct apk_checksum csum;
+	char rooted_name[1];
 	char name[];
 };
 
