@@ -115,7 +115,7 @@ static void print_package(const struct apk_database *db, const struct apk_packag
 
 static void print_manifest(const struct apk_package *pkg, const struct list_ctx *ctx)
 {
-	printf("%s " BLOB_FMT "\n", pkg->name->name, BLOB_PRINTF(*pkg->version));
+	printf(PKG_VER_FMT "\n", PKG_VER_PRINTF(pkg));
 }
 
 static void filter_package(const struct apk_database *db, const struct apk_package *pkg, const struct list_ctx *ctx, const struct apk_name *name)

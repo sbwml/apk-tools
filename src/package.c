@@ -776,8 +776,8 @@ int apk_ipkg_run_script(struct apk_installed_package *ipkg,
 
 	argv[0] = (char *) apk_script_types[type];
 
-	snprintf(fn, sizeof(fn), "%s/" PKG_VER_FMT ".%s",
-		script_exec_dir, PKG_VER_PRINTF(pkg),
+	snprintf(fn, sizeof(fn), "%s/" PKG_VER_DASH_FMT ".%s",
+		script_exec_dir, PKG_VER_DASH_PRINTF(pkg),
 		apk_script_types[type]);
 
 	if ((db->ctx->flags & (APK_NO_SCRIPTS | APK_SIMULATE)) != 0)
