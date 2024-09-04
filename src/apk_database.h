@@ -146,6 +146,8 @@ struct apk_repository {
 #define APK_DB_LAYER_UVOL		1
 #define APK_DB_LAYER_NUM		2
 
+#define APK_DB_DATA_ROOT "lib/apk"
+
 #define APK_REPOSITORY_CACHED		0
 #define APK_REPOSITORY_FIRST_CONFIGURED	1
 

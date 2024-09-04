@@ -1624,8 +1624,8 @@ static void unmount_proc(struct apk_database *db)
 const char *apk_db_layer_name(int layer)
 {
 	switch (layer) {
-	case APK_DB_LAYER_ROOT: return "lib/apk/db";
-	case APK_DB_LAYER_UVOL: return "lib/apk/db-uvol";
+	case APK_DB_LAYER_ROOT: return APK_DB_DATA_ROOT"/db";
+	case APK_DB_LAYER_UVOL: return APK_DB_DATA_ROOT"/db-uvol";
 	default:
 		assert(!"invalid layer");
 		return 0;
@@ -1940,7 +1940,7 @@ int apk_db_write_config(struct apk_database *db)
 		return 0;
 
 	if (db->ctx->open_flags & APK_OPENF_CREATE) {
-		apk_make_dirs(db->root_fd, "lib/apk/db", 0755, 0755);
+		apk_make_dirs(db->root_fd, APK_DB_DATA_ROOT"/db", 0755, 0755);
 		apk_make_dirs(db->root_fd, "etc/apk", 0755, 0755);
 	} else if (db->lock_fd == 0) {
 		apk_err(out, "Refusing to write db without write lock!");
