@@ -38,10 +38,13 @@ struct flagmap opendb_flagmap[] = {
 	{"no_world",            APK_OPENF_NO_WORLD},
 	{"no_sys_repos",        APK_OPENF_NO_SYS_REPOS},
 	{"no_installed_repo",   APK_OPENF_NO_INSTALLED_REPO},
+	{"cache_write",         APK_OPENF_CACHE_WRITE},
+	{"no_autoupdate",       APK_OPENF_NO_AUTOUPDATE},
+	{"no_cmdline_repos",    APK_OPENF_NO_CMDLINE_REPOS},
+	{"usermode",            APK_OPENF_USERMODE},
+	{"allow_arch",          APK_OPENF_ALLOW_ARCH},
 	{"no_repos",            APK_OPENF_NO_REPOS},
 	{"no_state",            APK_OPENF_NO_STATE},
-	{"no_scripts",          APK_OPENF_NO_SCRIPTS},
-	{"no_world",            APK_OPENF_NO_WORLD},
 	{NULL, 0}
 };
 
@@ -152,6 +155,7 @@ static int get_boolean_field(lua_State *L, int index, const char *key)
 static int get_ctx(lua_State *L, int i, struct apk_ctx *o)
 {
 	struct flagmap *f;
+	o->arch = (char *)get_opt_string_field(L, i, "arch", NULL);
 	o->root = (char *)get_opt_string_field(L, i, "root", NULL);
 	o->repositories_file = (char *)get_opt_string_field(L, i, "repositories_file", NULL);
 	o->keys_dir = (char *)get_opt_string_field(L, i, "keys_dir", NULL);
@@ -215,9 +219,14 @@ static int push_package(lua_State *L, struct apk_package *pkg)
 	lua_newtable(L);
 	set_string_field(L, -3, "name", pkg->name->name);
 	set_blob_field(L, -3, "version", *pkg->version);
-	set_blob_field(L, -3, "url", *pkg->url);
+	set_blob_field(L, -3, "arch", *pkg->arch);
 	set_blob_field(L, -3, "license", *pkg->license);
+	set_blob_field(L, -3, "origin", *pkg->origin);
+	set_blob_field(L, -3, "maintainer", *pkg->maintainer);
+	set_blob_field(L, -3, "url", *pkg->url);
 	set_blob_field(L, -3, "description", *pkg->description);
+	set_blob_field(L, -3, "commit", *pkg->commit);
+	set_int_field(L, -3, "installed_size", pkg->installed_size);
 	set_int_field(L, -3, "size", pkg->size);
 	return 1;
 }
