@@ -1709,7 +1709,10 @@ int apk_db_open(struct apk_database *db, struct apk_ctx *ac)
 		    st.st_uid != 0)
 			db->usermode = 1;
 	}
-	if (db->usermode) db->extract_flags |= APK_FSEXTRACTF_NO_CHOWN | APK_FSEXTRACTF_NO_SYS_XATTRS;
+	if (db->usermode) {
+		db->ctx->flags |= APK_NO_CHROOT;
+		db->extract_flags |= APK_FSEXTRACTF_NO_CHOWN | APK_FSEXTRACTF_NO_SYS_XATTRS;
+	}
 
 	setup_uvol_target(db);
 
