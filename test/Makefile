@@ -6,6 +6,7 @@ tmproot := /tmp/apk-test
 testroot = $(tmproot)/$(basename $@)
 
 SUDO	:= sudo
+APK_USERMODE ?= --usermode
 APK	:= ../src/apk --keys-dir /etc/apk/keys
 
 SYSREPO ?= http://nl.alpinelinux.org/alpine/edge/main
@@ -32,7 +33,7 @@ $(repos):
 
 
 clean:
-	$(SUDO) rm -rf $(addsuffix /*.apk,$(repos)) $(tmproot) *.ok *.out *.stamp
+	$(SUDO) rm -rf $(addsuffix /*.apk,$(repos)) $(tmproot) *.ok *.out *.stamp *.apk
 
 
 repos: repos.stamp
@@ -69,10 +70,15 @@ root-tests: repos.stamp
 	done; \
 	return $$failed
 
-tests:
+apk3.apk: apk3pkg/.dotfile
+	@echo "Building $@"
+	$(APK) mkpkg -F apk3pkg -I name:apk3 -I version:1.0 -o $@
+
+tests: apk3.apk
 	@echo "== Testing `$(APK) --version` =="
 	@for i in $(sort $(filter-out test%.sh,$(wildcard *.sh))); do \
-		./$$i || exit 1 ; \
+		APK="$(APK) $(APK_USERMODE)" ROOT="$(testroot)" ./$$i || exit 1 ; \
 	done
+	@rm -rf "$(testroot)"
 
 .PHONY:	$(repos) tests
