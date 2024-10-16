@@ -235,6 +235,7 @@ static int fsys_file_extract(struct apk_ctx *ac, const struct apk_file_info *fi,
 static int fsys_file_control(struct apk_fsdir *d, apk_blob_t filename, int ctrl)
 {
 	struct apk_ctx *ac = d->ac;
+	struct apk_out *out = &ac->out;
 	char tmpname[TMPNAME_MAX], apknewname[TMPNAME_MAX];
 	const char *fn;
 	int n, rc = 0, atfd = apk_ctx_fd_dest(d->ac);
@@ -257,6 +258,7 @@ static int fsys_file_control(struct apk_fsdir *d, apk_blob_t filename, int ctrl)
 		if (renameat(atfd, format_tmpname(&ac->dctx, d->pkgctx, dirname, apk_pathbuilder_get(&d->pb), tmpname),
 			     atfd, apknewname) < 0)
 			rc = -errno;
+		apk_notice(out, "new file written to %s", apknewname);
 		break;
 	case APK_FS_CTRL_CANCEL:
 		// unlink tmpname
