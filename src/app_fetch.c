@@ -15,6 +15,7 @@
 #include <zlib.h>
 
 #include "apk_applet.h"
+#include "apk_context.h"
 #include "apk_database.h"
 #include "apk_io.h"
 #include "apk_print.h"
@@ -111,6 +112,8 @@ static int option_parse_applet(void *ctx, struct apk_ctx *ac, int opt, const cha
 		break;
 	case OPT_FETCH_recursive:
 		fctx->flags |= FETCH_RECURSIVE;
+		// TODO: It seems when I specify APK_OPENF_NO_STATE, no layer gets 'enabled'?
+		ac->open_flags &= ~APK_OPENF_NO_STATE;
 		break;
 	case OPT_FETCH_stdout:
 		fctx->flags |= FETCH_STDOUT;
@@ -345,7 +348,9 @@ static int fetch_main(void *pctx, struct apk_ctx *ac, struct apk_string_array *a
 	struct apk_out *out = &ac->out;
 	struct apk_database *db = ac->db;
 	struct fetch_ctx *ctx = (struct fetch_ctx *) pctx;
-	struct apk_dependency *dep;
+	struct apk_dependency *db_dep;
+	struct apk_dependency arg_dep;
+	char **parg;
 
 	ctx->db = db;
 	ctx->prog = db->ctx->progress;
@@ -363,19 +368,63 @@ static int fetch_main(void *pctx, struct apk_ctx *ac, struct apk_string_array *a
 		return 0;
 	}
 
-	if (ctx->flags & FETCH_RECURSIVE) {
-		apk_dependency_array_init(&ctx->world);
-		foreach_array_item(dep, db->world)
-			mark_dep_flags(ctx, dep);
-		if (apk_array_len(args) != 0)
-			apk_db_foreach_matching_name(db, args, mark_name_flags, ctx);
-		if (ctx->errors == 0)
-			mark_names_recursive(db, args, ctx);
-		apk_dependency_array_free(&ctx->world);
-	} else {
-		if (apk_array_len(args) != 0)
-			apk_db_foreach_matching_name(db, args, mark_name, ctx);
+	apk_dependency_array_init(&ctx->world);
+
+	// fill ctx->world with packages we want to install
+	foreach_array_item(parg, args) {
+		apk_blob_t b = APK_BLOB_STR(*parg);
+		apk_blob_pull_dep(&b, db, &arg_dep);
+		if (APK_BLOB_IS_NULL(b) || b.len > 0) {
+			apk_err(out, "'%s' is not a valid %s dependency, format is %s",
+				*parg, "package", "name([<>~=]version)"
+			);
+			return -1;
+		}
+		apk_deps_add(&ctx->world, &arg_dep);
 	}
+
+	if (ctx->flags & FETCH_RECURSIVE) {
+		// if --recursive is set, use the solver to also mark dependencies
+		struct apk_changeset changeset = {};
+		int r;
+		apk_change_array_init(&changeset.changes);
+		r = apk_solver_solve(db, APK_SOLVERF_IGNORE_CONFLICT, ctx->world, &changeset);
+
+		if (r == 0) {
+			struct apk_change *change;
+			foreach_array_item(change, changeset.changes)
+				mark_package(ctx, change->new_pkg);
+		} else {
+			apk_solver_print_errors(db, &changeset, ctx->world);
+			ctx->errors++;
+		}
+	} else {
+		// if not --recursive, we mark packages in a simpler way
+		struct apk_dependency *dep;
+		struct apk_provider *provider;
+		struct apk_package *pkg = NULL;
+
+		foreach_array_item(dep, ctx->world) {
+			foreach_array_item(provider, dep->name->providers) {
+				if (apk_dep_is_provided(provider->pkg, dep, provider)) {
+					pkg = provider->pkg;
+					// TODO: first provider is picked automatically, is this what we want?
+					break;
+				}
+			}
+
+			if (pkg == NULL) {
+				// TODO better error handling
+				apk_err(out, "unable to fetch package %s\n", dep->name->name);
+				ctx->errors++;
+			} else {
+				mark_package(ctx, pkg);
+			}
+		}
+	}
+
+	apk_dependency_array_free(&ctx->world);
+
 	if (!ctx->errors)
 		apk_db_foreach_sorted_package(db, NULL, fetch_package, ctx);
 
