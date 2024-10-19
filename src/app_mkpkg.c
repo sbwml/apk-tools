@@ -421,7 +421,7 @@ static int mkpkg_main(void *pctx, struct apk_ctx *ac, struct apk_string_array *a
 
 	// construct package with ADB as header, and the file data in
 	// concatenated data blocks
-	os = adb_compress(apk_ostream_to_file(AT_FDCWD, ctx->output, 0644), &ac->compspec);
+	os = adb_compress(apk_ostream_to_file(AT_FDCWD, ctx->output, 0644), &ac->compspec, ac->compthreads);
 	if (IS_ERR(os)) {
 		r = PTR_ERR(os);
 		goto err;

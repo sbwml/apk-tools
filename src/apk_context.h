@@ -68,6 +68,7 @@ struct apk_ctx {
 	struct apk_out out;
 	struct apk_progress progress;
 	struct adb_compression_spec compspec;
+	int compthreads;
 	const char *root;
 	const char *arch;
 	const char *keys_dir;

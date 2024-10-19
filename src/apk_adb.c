@@ -538,6 +538,7 @@ const struct adb_object_schema schema_idb = {
 
 #define GENERATION_OPTIONS(OPT) \
 	OPT(OPT_GENERATION_compression,	APK_OPT_ARG APK_OPT_SH("c") "compression") \
+	OPT(OPT_GENERATION_jobs,	APK_OPT_ARG APK_OPT_SH("j") "compression-jobs") \
 	OPT(OPT_GENERATION_sign_key,	APK_OPT_ARG "sign-key")
 
 APK_OPT_GROUP(options_generation, "Generation", GENERATION_OPTIONS);
@@ -554,6 +555,9 @@ static int option_parse_generation(void *ctx, struct apk_ctx *ac, int optch, con
 			apk_err(out, "invalid compression type: %s", optarg);
 			return -EINVAL;
 		}
+		break;
+	case OPT_GENERATION_jobs:
+		ac->compthreads = atoi(optarg);
 		break;
 	case OPT_GENERATION_sign_key:
 		key = apk_trust_load_key(AT_FDCWD, optarg, 1);

@@ -309,7 +309,7 @@ static int mkndx_main(void *pctx, struct apk_ctx *ac, struct apk_string_array *a
 	adb_w_rootobj(&ndx);
 
 	r = adb_c_create(
-		adb_compress(apk_ostream_to_file(AT_FDCWD, ctx->output, 0644), &ac->compspec),
+		adb_compress(apk_ostream_to_file(AT_FDCWD, ctx->output, 0644), &ac->compspec, ac->compthreads),
 		&ctx->db, trust);
 
 	if (r == 0)
