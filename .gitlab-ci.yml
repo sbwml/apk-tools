@@ -13,7 +13,7 @@ test-legacy:alpine:
     script:
         - apk update
         - apk add make gcc git musl-dev openssl-dev linux-headers zlib-dev lua5.3-dev lua5.3-lzlib zstd-dev
-        - make -j$(nproc) check
+        - APK_USERMODE=" " make -j$(nproc) check
     tags:
         - docker-alpine
         - x86_64
