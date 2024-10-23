@@ -21,7 +21,8 @@ void apk_hash_init(struct apk_hash *h, const struct apk_hash_ops *ops,
 
 void apk_hash_free(struct apk_hash *h)
 {
-	if (h->ops->delete_item) apk_hash_foreach(h, (apk_hash_enumerator_f) h->ops->delete_item, NULL);
+	if (h->ops->delete_item) apk_hash_foreach(h, h->ops->delete_item, NULL);
+
 	apk_hash_array_free(&h->buckets);
 }
 
@@ -35,7 +36,7 @@ int apk_hash_foreach(struct apk_hash *h, apk_hash_enumerator_f e, void *ctx)
 	foreach_array_item(bucket, h->buckets) {
 		hlist_for_each_safe(pos, n, bucket) {
 			r = e(((void *) pos) - offset, ctx);
-			if (r != 0 && ctx != NULL)
+			if (r != 0)
 				return r;
 		}
 	}
@@ -92,7 +93,7 @@ void apk_hash_delete_hashed(struct apk_hash *h, apk_blob_t key, unsigned long ha
 		item = ((void *) pos) - offset;
 		if (h->ops->compare_item(item, key) == 0) {
 			hlist_del(pos, &h->buckets->item[hash]);
-			if (h->ops->delete_item) h->ops->delete_item(item);
+			if (h->ops->delete_item) h->ops->delete_item(item, NULL);
 			h->num_items--;
 			break;
 		}

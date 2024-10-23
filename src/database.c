@@ -92,11 +92,13 @@ static apk_blob_t pkg_name_get_key(apk_hash_item item)
 	return APK_BLOB_STR(((struct apk_name *) item)->name);
 }
 
-static void pkg_name_free(struct apk_name *name)
+static int pkg_name_free(apk_hash_item item, void *ctx)
 {
+	struct apk_name *name = item;
 	apk_provider_array_free(&name->providers);
 	apk_name_array_free(&name->rdepends);
 	apk_name_array_free(&name->rinstall_if);
+	return 0;
 }
 
 static const struct apk_hash_ops pkg_name_hash_ops = {
@@ -104,7 +106,7 @@ static const struct apk_hash_ops pkg_name_hash_ops = {
 	.get_key = pkg_name_get_key,
 	.hash_key = apk_blob_hash,
 	.compare = apk_blob_compare,
-	.delete_item = (apk_hash_delete_f) pkg_name_free,
+	.delete_item = pkg_name_free,
 };
 
 static apk_blob_t pkg_info_get_key(apk_hash_item item)
