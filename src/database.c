@@ -49,7 +49,7 @@ static const char * const apkindex_tar_gz = "APKINDEX.tar.gz";
 static const char * const apk_static_cache_dir = "var/cache/apk";
 static const char * const apk_world_file = "etc/apk/world";
 static const char * const apk_arch_file = "etc/apk/arch";
-static const char * const apk_lock_file = "lib/apk/db/lock";
+static const char * const apk_lock_file = "run/apk/db.lock";
 
 static struct apk_db_acl *apk_default_acl_dir, *apk_default_acl_file;
 
@@ -1625,8 +1625,8 @@ static void unmount_proc(struct apk_database *db)
 const char *apk_db_layer_name(int layer)
 {
 	switch (layer) {
-	case APK_DB_LAYER_ROOT: return "lib/apk/db";
-	case APK_DB_LAYER_UVOL: return "lib/apk/db-uvol";
+	case APK_DB_LAYER_ROOT: return APK_DB_DATA_ROOT"/db";
+	case APK_DB_LAYER_UVOL: return APK_DB_DATA_ROOT"/db-uvol";
 	default:
 		assert(!"invalid layer");
 		return 0;
@@ -1732,11 +1732,11 @@ int apk_db_open(struct apk_database *db, struct apk_ctx *ac)
 
 	if (ac->open_flags & APK_OPENF_WRITE) {
 		msg = "Unable to lock database";
+		apk_make_dirs(db->root_fd, "run/apk", 0755, 0755);
 		db->lock_fd = openat(db->root_fd, apk_lock_file,
 				     O_CREAT | O_RDWR | O_CLOEXEC, 0600);
 		if (db->lock_fd < 0) {
-			if (!(ac->open_flags & APK_OPENF_CREATE))
-				goto ret_errno;
+			goto ret_errno;
 		} else if (flock(db->lock_fd, LOCK_EX | LOCK_NB) < 0) {
 			struct sigaction sa, old_sa;
 
@@ -1941,7 +1941,7 @@ int apk_db_write_config(struct apk_database *db)
 		return 0;
 
 	if (db->ctx->open_flags & APK_OPENF_CREATE) {
-		apk_make_dirs(db->root_fd, "lib/apk/db", 0755, 0755);
+		apk_make_dirs(db->root_fd, APK_DB_DATA_ROOT"/db", 0755, 0755);
 		apk_make_dirs(db->root_fd, "etc/apk", 0755, 0755);
 	} else if (db->lock_fd == 0) {
 		apk_err(out, "Refusing to write db without write lock!");

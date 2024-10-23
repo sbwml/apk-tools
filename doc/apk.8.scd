@@ -394,27 +394,27 @@ The following options are available for all commands which generate APKv3 files.
 
 ## System files
 
-*/lib/apk/db/lock*
+*/run/apk/db.lock*
 	A lock file used to allow only one concurrent write transaction on
 	the system.
 
-*/lib/apk/db/installed*
-	Database of installed packages and their contents.
-
-*/lib/apk/db/scripts.tar*
-	Collection of all package scripts from currently installed packages.
-
-*/lib/apk/db/triggers*
-	List of triggers rules for currently installed packages.
-
-*/lib/apk/db-uvol*
-	Database symlink or a directory with similar structure as */lib/apk/db/*,
-	but which used for package content when managed using OpenWRT *uvol*
-	volume manager.
-
-*/lib/apk/exec*
+*/usr/libexec/apk*
 	Temporary directory for extraction and execution of package scripts
 	and triggers.
+
+*/usr/lib/apk/db/installed*
+	Database of installed packages and their contents.
+
+*/usr/lib/apk/db/scripts.tar*
+	Collection of all package scripts from currently installed packages.
+
+*/usr/lib/apk/db/triggers*
+	List of triggers rules for currently installed packages.
+
+*/usr/lib/apk/db-uvol*
+	Database symlink or a directory with similar structure as */usr/lib/apk/db/*,
+	but which used for package content when managed using OpenWRT *uvol*
+	volume manager.
 
 */var/log/apk.log*
 	Log file for changes done to the system.

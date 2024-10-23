@@ -79,7 +79,7 @@ static int option_parse_applet(void *applet_ctx, struct apk_ctx *ac, int opt, co
 					"@etc/init.d\n"
 					"-dev\n"
 					"-home\n"
-					"-lib/apk\n"
+					"-"APK_DB_DATA_ROOT"\n"
 					"-lib/rc/cache\n"
 					"-proc\n"
 					"-root\n"
@@ -480,4 +480,3 @@ static struct apk_applet apk_audit = {
 };
 
 APK_DEFINE_APPLET(apk_audit);
-

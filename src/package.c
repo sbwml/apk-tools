@@ -754,8 +754,11 @@ int apk_ipkg_run_script(struct apk_installed_package *ipkg,
 	// Originally this was /tmp, but it is often suggested to be 'noexec'.
 	// Then changed ro /var/cache/misc, but that is also often 'noexec'.
 	// /run was consider as it's tmpfs, but it also might be changing to 'noexec'.
-	// So use for now /lib/apk/exec even if it is not of temporary nature.
-	static const char script_exec_dir[] = "lib/apk/exec";
+	// /lib/apk/exec was used for a while, but that directory is not
+	// supposed to hold executables. Therefore, use /usr/libexex/apk, which
+	// even if it is not of temporary nature, is supposed to have
+	// executables in it
+	static const char script_exec_dir[] = "usr/libexec/apk";
 	struct apk_out *out = &db->ctx->out;
 	struct apk_package *pkg = ipkg->pkg;
 	char fn[PATH_MAX];
