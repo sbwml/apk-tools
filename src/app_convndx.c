@@ -71,7 +71,7 @@ static int conv_main(void *pctx, struct apk_ctx *ac, struct apk_string_array *ar
 	adb_w_rootobj(&ndx);
 
 	r = adb_c_create(
-		adb_compress(apk_ostream_to_fd(STDOUT_FILENO), &ac->compspec),
+		adb_compress(apk_ostream_to_fd(STDOUT_FILENO), &ac->compspec, ac->compthreads),
 		&ctx->dbi, trust);
 err:
 	adb_free(&ctx->dbi);

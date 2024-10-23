@@ -12,7 +12,7 @@
 struct compression_info {
 	const char *name;
 	uint8_t min_level, max_level;
-	struct apk_ostream *(*compress)(struct apk_ostream *, uint8_t);
+	struct apk_ostream *(*compress)(struct apk_ostream *, uint8_t, int);
 	struct apk_istream *(*decompress)(struct apk_istream *);
 };
 
@@ -118,7 +118,7 @@ err:
 	return ERR_PTR(apk_istream_close_error(is, -APKE_ADB_COMPRESSION));
 }
 
-struct apk_ostream *adb_compress(struct apk_ostream *os, struct adb_compression_spec *spec)
+struct apk_ostream *adb_compress(struct apk_ostream *os, struct adb_compression_spec *spec, int threads)
 {
 	const struct compression_info *ci;
 
@@ -135,7 +135,7 @@ struct apk_ostream *adb_compress(struct apk_ostream *os, struct adb_compression_
 	case ADB_COMP_DEFLATE:
 		if (spec->level != 0) break;
 		if (apk_ostream_write(os, "ADBd", 4) < 0) goto err;
-		return apk_ostream_deflate(os, 0);
+		return apk_ostream_deflate(os, 0, threads);
 	}
 
 	ci = compression_info_by_alg(spec->alg);
@@ -144,7 +144,7 @@ struct apk_ostream *adb_compress(struct apk_ostream *os, struct adb_compression_
 
 	if (apk_ostream_write(os, "ADBc", 4) < 0) goto err;
 	if (apk_ostream_write(os, spec, sizeof *spec) < 0) goto err;
-	return ci->compress(os, spec->level);
+	return ci->compress(os, spec->level, threads);
 
 err:
 	apk_ostream_cancel(os, -APKE_ADB_COMPRESSION);

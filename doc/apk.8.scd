@@ -283,6 +283,10 @@ The following options are available for all commands which generate APKv3 files.
 	- deflate (level 1-9)
 	- zstd (level 1-22)
 
+*-j, --compression-jobs* _JOBS_
+	Use __JOBS__ threads simultaniously for compression. Defaults to *1*.
+	(Currently only supported with zstd).
+
 *--sign-key* _KEYFILE_
 	Sign the file with a private key in the specified _KEYFILE_.
 

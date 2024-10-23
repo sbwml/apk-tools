@@ -239,11 +239,11 @@ struct apk_ostream *apk_ostream_zlib(struct apk_ostream *, int, uint8_t);
 static inline struct apk_ostream *apk_ostream_gzip(struct apk_ostream *os) {
 	return apk_ostream_zlib(os, 0, 0);
 }
-static inline struct apk_ostream *apk_ostream_deflate(struct apk_ostream *os, uint8_t level) {
+static inline struct apk_ostream *apk_ostream_deflate(struct apk_ostream *os, uint8_t level, int threads) {
 	return apk_ostream_zlib(os, 1, level);
 }
 
 struct apk_istream *apk_istream_zstd(struct apk_istream *);
-struct apk_ostream *apk_ostream_zstd(struct apk_ostream *, uint8_t);
+struct apk_ostream *apk_ostream_zstd(struct apk_ostream *, uint8_t, int);
 
 #endif

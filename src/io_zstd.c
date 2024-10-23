@@ -15,7 +15,6 @@
 
 #include "apk_defines.h"
 #include "apk_io.h"
-#include "apk_nproc.h"
 
 struct apk_zstd_istream {
 	struct apk_istream is;
@@ -195,11 +194,10 @@ static const struct apk_ostream_ops zstd_ostream_ops = {
 	.close = zo_close,
 };
 
-struct apk_ostream *apk_ostream_zstd(struct apk_ostream *output, uint8_t level)
+struct apk_ostream *apk_ostream_zstd(struct apk_ostream *output, uint8_t level, int threads)
 {
 	struct apk_zstd_ostream *os;
 	size_t errc, buf_outsize;
-	int threads;
 	ZSTD_bounds bounds;
 
 	if (IS_ERR(output)) return ERR_CAST(output);
@@ -216,14 +214,6 @@ struct apk_ostream *apk_ostream_zstd(struct apk_ostream *output, uint8_t level)
 		free(os);
 		goto err;
 	}
-
-	threads = apk_get_nproc();
-
-	/* above 6 threads, zstd does not actually seem to perform much or at all
-	 * better; it uses the cpu, it uses a disproportionate amount of memory,
-	 * but time improvements are marginal at best
-	 */
-	if (threads > 6) threads = 6;
 
 	/* constrain the thread count; e.g. static zstd does not support threads
 	 * and will return 0 for both bounds, and setting compression level to

@@ -22,6 +22,7 @@ void apk_ctx_init(struct apk_ctx *ac)
 	ac->out.out = stdout;
 	ac->out.err = stderr;
 	ac->out.verbosity = 1;
+	ac->compthreads = 1;
 	apk_digest_ctx_init(&ac->dctx, APK_DIGEST_SHA256);
 }
 
