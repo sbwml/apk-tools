@@ -206,7 +206,8 @@ static void discover_name(struct apk_solver_state *ss, struct apk_name *name)
 				(BIT(pkg->layer) & db->active_layers) &&
 				((pkg->repos & db->available_repos) ||
 				  pkg->cached_non_repository ||
-				  pkg->ipkg);
+				  ((!(ss->solver_flags_inherit & APK_SOLVERF_AVAILABLE)) &&
+				   pkg->ipkg));
 
 			/* Prune install_if packages that are no longer available,
 			 * currently works only if SOLVERF_AVAILABLE is set in the
