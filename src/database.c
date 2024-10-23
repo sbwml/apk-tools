@@ -2428,11 +2428,15 @@ int apk_db_add_repository(struct apk_database *db, apk_blob_t _repository)
 				case -EALREADY:
 					update_error = 0;
 					break;
+				case -EACCES:
+					update_error = 0;
+					goto nocache;
 				}
 			}
 			r = apk_repo_format_cache_index(APK_BLOB_BUF(buf), repo);
 			if (r != 0) goto err;
 			atfd = db->cache_fd;
+ nocache:
 		}
 	} else {
 		db->local_repos |= BIT(repo_num);
