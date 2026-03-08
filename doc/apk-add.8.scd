@@ -30,6 +30,10 @@ To later upgrade or downgrade back to a repository version, use
 *apk add* supports the commit options described in *apk*(8), as well as the
 following options:
 
+*--force-reinstall*
+	Allow reinstalling already-installed packages without a version
+	change. Only the named packages are reinstalled, not dependencies.
+
 *--initdb*
 	Initialize a new package database.
 

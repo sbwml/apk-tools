@@ -24,6 +24,7 @@ struct add_ctx {
 	OPT(OPT_ADD_initdb,	"initdb") \
 	OPT(OPT_ADD_latest,	APK_OPT_SH("l") "latest") \
 	OPT(OPT_ADD_no_chown,   "no-chown") \
+	OPT(OPT_ADD_reinstall,	"force-reinstall") \
 	OPT(OPT_ADD_upgrade,	APK_OPT_SH("u") "upgrade") \
 	OPT(OPT_ADD_usermode,	"usermode") \
 	OPT(OPT_ADD_virtual,	APK_OPT_ARG APK_OPT_SH("t") "virtual")
@@ -40,6 +41,9 @@ static int add_parse_option(void *ctx, struct apk_ctx *ac, int opt, const char *
 		break;
 	case OPT_ADD_latest:
 		actx->solver_flags |= APK_SOLVERF_LATEST;
+		break;
+	case OPT_ADD_reinstall:
+		actx->solver_flags |= APK_SOLVERF_REINSTALL;
 		break;
 	case OPT_ADD_upgrade:
 		actx->solver_flags |= APK_SOLVERF_UPGRADE;
@@ -177,7 +181,7 @@ static int add_main(void *ctx, struct apk_ctx *ac, struct apk_string_array *args
 			apk_deps_add(&world, &dep);
 			apk_solver_set_name_flags(dep.name,
 						  actx->solver_flags,
-						  actx->solver_flags);
+						  actx->solver_flags & ~APK_SOLVERF_REINSTALL);
 		}
 	}
 	if (actx->virtpkg) {
@@ -185,7 +189,7 @@ static int add_main(void *ctx, struct apk_ctx *ac, struct apk_string_array *args
 		apk_deps_add(&world, &virtdep);
 		apk_solver_set_name_flags(virtdep.name,
 					  actx->solver_flags,
-					  actx->solver_flags);
+					  actx->solver_flags & ~APK_SOLVERF_REINSTALL);
 	}
 
 	r = apk_solver_commit(db, 0, world);
