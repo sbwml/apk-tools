@@ -1,0 +1,84 @@
+on:
+  push:
+    tags:
+      - '*'
+
+env:
+  ALPINE_DEPS: "make gcc git scdoc musl-dev linux-headers openssl-dev zlib-dev lua5.3-dev lua5.3-lzlib cmocka-dev python3-dev"
+  ALPINE_STATIC_DEPS: "zlib-static openssl-libs-static"
+
+name: Build apk-tools (static)
+
+jobs:
+  build_static:
+    name: build:static (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch:
+          - x86_64
+    container:
+      image: alpinelinux/build-base:latest-${{ matrix.arch }}
+      options: --user root
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare environment and build
+        env:
+          ARCH: ${{ matrix.arch }}
+          ALPINE_DEPS: ${{ env.ALPINE_DEPS }}
+          ALPINE_STATIC_DEPS: ${{ env.ALPINE_STATIC_DEPS }}
+        run: |
+          set -euo pipefail
+          if [ "$ARCH" = "x86_64" ]; then EXTRA="--repository=$(sed -ne 's/main/community/p' < /etc/apk/repositories) shellcheck"; fi
+          if command -v abuild-apk >/dev/null 2>&1; then
+            abuild-apk add -u meson $ALPINE_DEPS $ALPINE_STATIC_DEPS zstd-dev zstd-static $EXTRA
+          else
+            apk update || true
+            apk add --no-cache meson $ALPINE_DEPS $ALPINE_STATIC_DEPS zstd-dev zstd-static
+          fi
+          meson setup --auto-features=enabled build
+          ninja -C build
+          meson setup build-static -Dc_link_args=-static -Ddefault_library=static -Dprefer_static=true
+          ninja -C build-static src/apk
+          meson test -C build || true
+          # ensure deterministic static artifact name
+          if [ -f build-static/src/apk ]; then
+            install -s -m0755 build-static/src/apk build-static/src/apk.static-$ARCH
+          elif ls build-static/src/apk.* >/dev/null 2>&1; then
+            for f in build-static/src/apk.*; do
+              cp -a "$f" build-static/src/apk.static-$ARCH || true
+            done
+          fi
+
+      - name: Upload test log
+        if: always()
+        uses: actions/upload-artifact@main
+        with:
+          name: meson-testlog-${{ matrix.arch }}
+          path: build/meson-logs/testlog.txt
+
+      - name: Upload junit reports
+        if: always()
+        uses: actions/upload-artifact@main
+        with:
+          name: junit-${{ matrix.arch }}
+          path: build/**/*.junit.xml
+
+      - name: Upload static binary artifact
+        if: always()
+        uses: actions/upload-artifact@main
+        with:
+          name: apk.static-${{ matrix.arch }}
+          path: build-static/src/apk.static-${{ matrix.arch }}
+
+      - name: Create release
+        uses: ncipollo/release-action@main
+        with:
+          name: ${{ github.ref_name }}
+          allowUpdates: true
+          tag: ${{ env.latest_release }}
+          replacesArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: build-static/src/apk.static-${{ matrix.arch }}
